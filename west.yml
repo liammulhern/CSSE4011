@@ -1,0 +1,38 @@
+# Dependant on the west manifest file for upstream Zephyr.
+# Zephyr revision should only point to an official release commit.
+#
+# Only imports subprojects currently required to minimise cloning time.
+
+manifest:
+  defaults:
+    remote: upstream
+
+  remotes:
+    - name: upstream
+      url-base: https://github.com/zephyrproject-rtos
+    - name: liammulhern
+      url-base: https://github.com/liammulhern
+
+  projects:
+    - name: zephyr
+      repo-path: zephyr
+      revision: main
+      import:
+        name-whitelist:
+          - cmsis
+          - hal_nordic
+          - hal_stm32
+          - hal_silabs
+          - hal_espressif
+          - mbedtls
+          - mcuboot
+          - mcumgr
+          - segger
+          - tinycbor
+          - tinycrypt
+          - littlefs
+    - name: west-driver-init
+      remote: liammulhern
+      path: modules/west-driver-init
+      revision: main
+      west-commands: west_commands/west-commands.yml
