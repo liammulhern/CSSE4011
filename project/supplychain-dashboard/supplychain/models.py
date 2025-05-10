@@ -31,13 +31,24 @@ class Product(models.Model):
         help_text="Current owning company."
     )
 
-    created_at = models.DateTimeField(
+    created_timestamp = models.DateTimeField(
         auto_now_add=True,
         help_text="When this product record was created."
     )
 
+    components = models.ManyToManyField(
+        'self',
+        through='ProductComposition',
+        symmetrical=False,
+        related_name='used_in',
+        help_text=(
+            "Other products (and quantities) used to build this one. "
+            "Use the through‐model ProductComposition to assign quantities."
+        )
+    )
+
     class Meta:
-        ordering = ['created_at']
+        ordering = ['created_timestamp']
         verbose_name = "Product"
         verbose_name_plural = "Products"
 
@@ -91,7 +102,7 @@ class ProductEvent(models.Model):
         help_text="User who recorded this event."
     )
 
-    created_at = models.DateTimeField(
+    created_timestamp = models.DateTimeField(
         auto_now_add=True,
         help_text="When this record was created in the dashboard database."
     )
@@ -107,6 +118,45 @@ class ProductEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} @ {self.timestamp.isoformat()} for {self.product}"
+
+
+class ProductComposition(models.Model):
+    """
+    Through‐model linking a parent product to its component products.
+    Records how many units of each component go into one unit of the parent.
+    """
+    parent = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='composition_lines',
+        help_text="The product being built."
+    )
+
+    component = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='component_of',
+        help_text="A product used as an ingredient/part."
+    )
+
+    quantity = models.PositiveIntegerField(
+        default=1,
+        help_text="How many units of the component are used in one unit of the parent."
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this composition entry was created."
+    )
+
+    class Meta:
+        unique_together = ('parent', 'component')
+        verbose_name = "Product Composition"
+        verbose_name_plural = "Product Compositions"
+        ordering = ['parent', 'component']
+
+    def __str__(self):
+        return f"{self.quantity} × {self.component.product_key} → {self.parent.product_key}"
 
 
 class CustodyTransfer(models.Model):
@@ -235,7 +285,7 @@ class SupplyChainRequirement(models.Model):
         )
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_timestamp = models.DateTimeField(auto_now_add=True)
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -273,7 +323,7 @@ class ProductOrder(models.Model):
         help_text='Company receiving the products.'
     )
 
-    order_time = models.DateTimeField(
+    order_timestamp = models.DateTimeField(
         help_text='Timestamp when the order was placed.'
     )
 
@@ -290,7 +340,7 @@ class ProductOrder(models.Model):
         help_text='Supply chain requirements that apply to this order.'
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_timestamp = models.DateTimeField(auto_now_add=True)
 
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -304,7 +354,7 @@ class ProductOrder(models.Model):
     class Meta:
         verbose_name = 'Product Order'
         verbose_name_plural = 'Product Orders'
-        ordering = ['-order_time']
+        ordering = ['-order_timestamp']
 
     def __str__(self):
         return (

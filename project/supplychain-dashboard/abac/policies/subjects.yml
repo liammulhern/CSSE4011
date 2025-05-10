@@ -1,0 +1,7 @@
+subject_attributes:
+  - name: company_type
+    description: One of [supplier, manufacturer, distributor, retailer, consumer]
+  - name: company_id
+    description: The PK of the Company they belong to
+  - name: scanned_products
+    description: List of product_key strings they have scanned
