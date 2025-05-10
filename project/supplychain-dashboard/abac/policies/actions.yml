@@ -1,0 +1,9 @@
+actions:
+  - create_order
+  - view_order
+  - create_event
+  - view_event
+  - create_custody_transfer
+  - view_custody_transfer
+  - view_requirement
+

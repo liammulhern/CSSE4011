@@ -46,3 +46,4 @@ class PolicyAdmin(admin.ModelAdmin):
         PolicyResourceAttributeInline,
         PolicyActionInline,
     )
+

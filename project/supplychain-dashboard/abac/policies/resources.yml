@@ -1,0 +1,20 @@
+resource_attributes:
+  - model: ProductOrder
+    attrs:
+      - name: supplier_company_id
+      - name: receiver_company_id
+
+  - model: ProductEvent
+    attrs:
+      - name: product_owner_id      # current owner company
+      - name: product_order_id      # if event is tied to an order
+
+  - model: CustodyTransfer
+    attrs:
+      - name: from_company_id
+      - name: to_company_id
+
+  - model: ProductOrderRequirement
+    attrs:
+      - name: order_id
+      - name: requirement_id
