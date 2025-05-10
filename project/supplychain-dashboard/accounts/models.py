@@ -24,11 +24,13 @@ class Company(models.Model):
         unique=True,
         help_text="Official company name."
     )
+
     type = models.CharField(
         max_length=20,
         choices=TYPE_CHOICES,
         help_text="Role of this company in the supply chain."
     )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         help_text="Timestamp when the company was registered."

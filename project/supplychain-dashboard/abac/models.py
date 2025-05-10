@@ -20,10 +20,12 @@ class SubjectAttribute(models.Model):
         on_delete=models.CASCADE,
         related_name="abac_subject_attributes",
     )
+
     name = models.CharField(
         max_length=100,
         help_text="Attribute name, e.g. 'region', 'clearance_level'."
     )
+
     value = models.CharField(
         max_length=200,
         help_text="Attribute value as string."
@@ -48,12 +50,16 @@ class ResourceAttribute(models.Model):
         on_delete=models.CASCADE,
         related_name="abac_resource_attributes"
     )
+
     object_id = models.PositiveIntegerField()
+
     content_object = GenericForeignKey("content_type", "object_id")
+
     name = models.CharField(
         max_length=100,
         help_text="Attribute name, e.g. 'sensitivity', 'owner_company'."
     )
+
     value = models.CharField(
         max_length=200,
         help_text="Attribute value as string."
@@ -90,10 +96,12 @@ class Policy(models.Model):
         unique=True,
         help_text="Human-readable policy name."
     )
+
     description = models.TextField(
         blank=True,
         help_text="What this policy enforces."
     )
+
     effect = models.CharField(
         max_length=5,
         choices=EFFECT_CHOICES,
@@ -120,7 +128,9 @@ class PolicySubjectAttribute(models.Model):
         on_delete=models.CASCADE,
         related_name="subject_attribute_requirements"
     )
+
     name = models.CharField(max_length=100)
+
     value = models.CharField(max_length=200)
 
     class Meta:
@@ -141,7 +151,9 @@ class PolicyResourceAttribute(models.Model):
         on_delete=models.CASCADE,
         related_name="resource_attribute_requirements"
     )
+
     name = models.CharField(max_length=100)
+
     value = models.CharField(max_length=200)
 
     class Meta:
@@ -162,6 +174,7 @@ class PolicyAction(models.Model):
         on_delete=models.CASCADE,
         related_name="actions"
     )
+
     name = models.CharField(
         max_length=100,
         help_text="Action name to be checked in code."
