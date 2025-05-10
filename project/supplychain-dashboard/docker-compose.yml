@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   db:
     image: postgres:15
@@ -9,22 +8,22 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
   web:
-    build: .
-    # expose both HTTP and debug ports
+    build:
+      context: .
+      target: dev
     ports:
       - "8000:8000"
       - "5678:5678"
     volumes:
-      - .:/app
+      - .:/home/appuser
     env_file:
       - .env
     depends_on:
       - db
     # use debugpy to launch Django
     command: >
-      uv run python -m debugpy
-      --bind 0.0.0.0:5678
-      --wait-for-client
+      uv run python -Xfrozen_modules=off -m debugpy
+      --listen 0.0.0.0:5678
       manage.py runserver 0.0.0.0:8000
 
 volumes:
