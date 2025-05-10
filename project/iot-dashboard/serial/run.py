@@ -1,0 +1,76 @@
+"""
+Entry point for the serial-terminal CLI.
+
+Uses argparse to parse CLI options, starts the
+SerialClient, and reads user input lines to send.
+
+Example
+
+python3 main.py --port /dev/ttyACM0 --baud 115200
+"""
+
+import argparse
+import logging
+from serial_client import SerialClient
+from message_parser import parse_buffer
+from prompt_toolkit import PromptSession
+from prompt_toolkit.patch_stdout import patch_stdout
+
+# Configure root logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+
+
+def main():
+    """
+    Parse arguments, start serial client, and handle user I/O loop.
+    """
+    parser = argparse.ArgumentParser(
+        description="Serial terminal that forwards JSON messages via HTTP"
+    )
+    parser.add_argument(
+        "-p", "--port",
+        default="/dev/ttyACM0",
+        help="Serial port device"
+    )
+    parser.add_argument(
+        "-b", "--baud",
+        type=int,
+        default=115200,
+        help="Baud rate"
+    )
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="Enable debug logging"
+    )
+    args = parser.parse_args()
+
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    client = SerialClient(args.port, args.baud, parser_callback=parse_buffer)
+    client.start()
+
+    print(f"Connected to {args.port} @ {args.baud}. Type 'exit' to quit.")
+
+    session = PromptSession("> ")
+    print(f"Connected to {args.port} @ {args.baud}. Type 'exit' to quit.")
+
+    # patch_stdout lets us safely print() from other threads without breaking the prompt.
+    with patch_stdout():
+        try:
+            while True:
+                line = session.prompt()
+                if line.strip().lower() == "exit":
+                    break
+                client.write(line)
+        except (KeyboardInterrupt, EOFError):
+            print("\nExiting…")
+        finally:
+            client.stop()
+
+if __name__ == "__main__":
+    main()

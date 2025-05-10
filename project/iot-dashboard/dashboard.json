@@ -1,0 +1,899 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "dekxcjwb6q29sa"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "metric"
+            },
+            "properties": [
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              }
+            ]
+          },
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "value 0",
+                  "value 1",
+                  "value 2",
+                  "value 3",
+                  "value 4",
+                  "value 5",
+                  "value 6",
+                  "value 7"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "aggregates": [],
+            "columns": [
+              {
+                "alias": "message.value",
+                "custom": false,
+                "name": "message.value",
+                "type": "Float64"
+              },
+              {
+                "alias": "message.node",
+                "custom": false,
+                "name": "message.node",
+                "type": "Int64"
+              },
+              {
+                "alias": "timestamp",
+                "hint": "time",
+                "name": "timestamp",
+                "type": "DateTime"
+              }
+            ],
+            "database": "default",
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "time",
+                "key": "",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "type": "datetime"
+              }
+            ],
+            "groupBy": [],
+            "limit": 1000,
+            "meta": {},
+            "mode": "aggregate",
+            "orderBy": [
+              {
+                "default": true,
+                "dir": "ASC",
+                "hint": "time",
+                "name": ""
+              }
+            ],
+            "queryType": "timeseries",
+            "table": "uart_messages"
+          },
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "dekxcjwb6q29sa"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "aggregates": [],
+              "columns": [
+                {
+                  "alias": "message.value",
+                  "custom": false,
+                  "name": "message.value",
+                  "type": "Float64"
+                },
+                {
+                  "alias": "message.node",
+                  "custom": false,
+                  "name": "message.node",
+                  "type": "Int64"
+                },
+                {
+                  "alias": "timestamp",
+                  "hint": "time",
+                  "name": "timestamp",
+                  "type": "DateTime"
+                }
+              ],
+              "database": "default",
+              "filters": [
+                {
+                  "condition": "AND",
+                  "filterType": "custom",
+                  "hint": "time",
+                  "key": "",
+                  "operator": "WITH IN DASHBOARD TIME RANGE",
+                  "type": "datetime"
+                }
+              ],
+              "groupBy": [],
+              "limit": 1000,
+              "meta": {},
+              "mode": "aggregate",
+              "orderBy": [
+                {
+                  "default": true,
+                  "dir": "ASC",
+                  "hint": "time",
+                  "name": ""
+                }
+              ],
+              "queryType": "timeseries",
+              "table": "uart_messages"
+            }
+          },
+          "pluginVersion": "4.8.2",
+          "queryType": "timeseries",
+          "rawSql": "SELECT timestamp as \"time\", message.value as value, message.node as metric FROM \"default\".\"uart_messages\" WHERE message_type = 1 AND ( time >= $__fromTime AND time <= $__toTime ) ORDER BY time ASC LIMIT 100000",
+          "refId": "A"
+        }
+      ],
+      "title": "Node RSSI (-dBm)",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "string",
+                "enumConfig": {
+                  "text": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7"
+                  ]
+                },
+                "targetField": "metric"
+              },
+              {
+                "destinationType": "number",
+                "targetField": "value"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "multi"
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "dekxcjwb6q29sa"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "metric"
+            },
+            "properties": [
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": "A",
+                  "mode": "none"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "builderOptions": {
+            "aggregates": [],
+            "columns": [
+              {
+                "alias": "message.value",
+                "custom": false,
+                "name": "message.value",
+                "type": "Float64"
+              },
+              {
+                "alias": "message.node",
+                "custom": false,
+                "name": "message.node",
+                "type": "Int64"
+              },
+              {
+                "alias": "timestamp",
+                "hint": "time",
+                "name": "timestamp",
+                "type": "DateTime"
+              }
+            ],
+            "database": "default",
+            "filters": [
+              {
+                "condition": "AND",
+                "filterType": "custom",
+                "hint": "time",
+                "key": "",
+                "operator": "WITH IN DASHBOARD TIME RANGE",
+                "type": "datetime"
+              }
+            ],
+            "groupBy": [],
+            "limit": 1000,
+            "meta": {},
+            "mode": "aggregate",
+            "orderBy": [
+              {
+                "default": true,
+                "dir": "ASC",
+                "hint": "time",
+                "name": ""
+              }
+            ],
+            "queryType": "timeseries",
+            "table": "uart_messages"
+          },
+          "datasource": {
+            "type": "grafana-clickhouse-datasource",
+            "uid": "dekxcjwb6q29sa"
+          },
+          "editorType": "sql",
+          "format": 0,
+          "meta": {
+            "builderOptions": {
+              "aggregates": [],
+              "columns": [
+                {
+                  "alias": "message.value",
+                  "custom": false,
+                  "name": "message.value",
+                  "type": "Float64"
+                },
+                {
+                  "alias": "message.node",
+                  "custom": false,
+                  "name": "message.node",
+                  "type": "Int64"
+                },
+                {
+                  "alias": "timestamp",
+                  "hint": "time",
+                  "name": "timestamp",
+                  "type": "DateTime"
+                }
+              ],
+              "database": "default",
+              "filters": [
+                {
+                  "condition": "AND",
+                  "filterType": "custom",
+                  "hint": "time",
+                  "key": "",
+                  "operator": "WITH IN DASHBOARD TIME RANGE",
+                  "type": "datetime"
+                }
+              ],
+              "groupBy": [],
+              "limit": 1000,
+              "meta": {},
+              "mode": "aggregate",
+              "orderBy": [
+                {
+                  "default": true,
+                  "dir": "ASC",
+                  "hint": "time",
+                  "name": ""
+                }
+              ],
+              "queryType": "timeseries",
+              "table": "uart_messages"
+            }
+          },
+          "pluginVersion": "4.8.2",
+          "queryType": "timeseries",
+          "rawSql": "SELECT timestamp as \"time\", message.value as value, message.node as metric FROM \"default\".\"uart_messages\" WHERE message_type = 2 AND ( time >= $__fromTime AND time <= $__toTime ) ORDER BY time ASC LIMIT 100000",
+          "refId": "A"
+        }
+      ],
+      "title": "Node Distance (m)",
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "string",
+                "enumConfig": {
+                  "text": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7"
+                  ]
+                },
+                "targetField": "metric"
+              },
+              {
+                "destinationType": "number",
+                "targetField": "value"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
+          "id": "prepareTimeSeries",
+          "options": {
+            "format": "multi"
+          }
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "dekxcjwb6q29sa"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 10,
+        "x": 0,
+        "y": 10
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "",
+              "limit": 1000,
+              "mode": "list",
+              "queryType": "table",
+              "table": ""
+            }
+          },
+          "pluginVersion": "4.8.2",
+          "queryType": "table",
+          "rawSql": "SELECT\n  ts_array[idx]                 AS time,\n  cumulative_array[idx]         AS cumulative_distance\nFROM\n(\n  SELECT\n    ts_array,\n    arrayCumSum(\n      arrayMap(\n        (x, y, px, py) ->\n          sqrt((x - px)*(x - px) + (y - py)*(y - py)),\n        xs_array,\n        ys_array,\n        arraySlice(arrayConcat([xs_array[1]], xs_array), 1, length(xs_array)),\n        arraySlice(arrayConcat([ys_array[1]], ys_array), 1, length(ys_array))\n      )\n    ) AS cumulative_array\n  FROM\n  (\n    SELECT\n      groupArray(ts)    AS ts_array,\n      groupArray(x_nn)  AS xs_array,\n      groupArray(y_nn)  AS ys_array\n    FROM\n    (\n      SELECT\n        timestamp                       AS ts,\n        toFloat64(ifNull(message.x_pos, 0.0)) AS x_nn,\n        toFloat64(ifNull((message.y_pos), 0.0))  AS y_nn\n      FROM \"default\".\"uart_messages\"\n      WHERE\n        message_type = 0\n        AND $__timeFilter(timestamp)   -- Grafana time macro\n      ORDER BY timestamp\n    ) AS ordered_points\n  ) AS arrays\n) AS with_cumulative\nARRAY JOIN arrayEnumerate(ts_array) AS idx\nORDER BY time\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Cumulative Distance (m)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "dekxcjwb6q29sa"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 10,
+        "y": 10
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "",
+              "limit": 1000,
+              "mode": "list",
+              "queryType": "table",
+              "table": ""
+            }
+          },
+          "pluginVersion": "4.8.2",
+          "queryType": "table",
+          "rawSql": "SELECT\n  ts_array[idx]                      AS time,\n  velocity_array[idx]                AS velocity\nFROM\n(\n  SELECT\n    ts_array,\n    arrayMap(\n      (d, dt) -> if(dt > 0, d/dt, 0.0),\n      distances,\n      durations\n    )                                AS velocity_array\n  FROM\n  (\n    SELECT\n      xs_array,\n      ys_array,\n      ts_array,\n      arrayMap(\n        (x, y, px, py) ->\n          sqrt((x - px)*(x - px) + (y - py)*(y - py)),\n        xs_array,\n        ys_array,\n        arraySlice(arrayConcat([xs_array[1]], xs_array), 1, length(xs_array)),\n        arraySlice(arrayConcat([ys_array[1]], ys_array), 1, length(ys_array))\n      )                                AS distances,\n      arrayMap(\n        (t, pt) -> toFloat64(toUnixTimestamp(t) - toUnixTimestamp(pt)),\n        ts_array,\n        arraySlice(arrayConcat([ts_array[1]], ts_array), 1, length(ts_array))\n      )                                AS durations\n    FROM\n    (\n      SELECT\n        groupArray(ts)                AS ts_array,\n        groupArray(toFloat64(ifNull(message.x_pos, 0.0))) AS xs_array,\n        groupArray(toFloat64(ifNull(message.y_pos, 0.0))) AS ys_array\n      FROM\n      (\n        SELECT\n          timestamp                   AS ts,\n          message.x_pos,\n          message.y_pos\n        FROM \"default\".\"uart_messages\"\n        WHERE\n          message_type = 0\n          AND $__timeFilter(timestamp)\n        ORDER BY timestamp\n      ) AS ordered_points\n    ) AS arrays\n  ) AS with_segments\n) AS with_velocity\nARRAY JOIN arrayEnumerate(ts_array) AS idx\nORDER BY time\n",
+          "refId": "A"
+        }
+      ],
+      "title": "Velocity (m/s)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-clickhouse-datasource",
+        "uid": "dekxcjwb6q29sa"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-RdYlGr"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMax": 4,
+            "axisSoftMin": 0,
+            "fillOpacity": 50,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "pointShape": "circle",
+            "pointSize": {
+              "fixed": 5
+            },
+            "pointStrokeWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "show": "points"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "y"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 10
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "mapping": "auto",
+        "series": [
+          {
+            "color": {
+              "matcher": {
+                "id": "byName",
+                "options": "age_seconds"
+              }
+            },
+            "frame": {
+              "matcher": {
+                "id": "byIndex",
+                "options": 0
+              }
+            }
+          }
+        ],
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.6.1",
+      "targets": [
+        {
+          "editorType": "sql",
+          "format": 1,
+          "meta": {
+            "builderOptions": {
+              "columns": [],
+              "database": "",
+              "limit": 1000,
+              "mode": "list",
+              "queryType": "table",
+              "table": ""
+            }
+          },
+          "pluginVersion": "4.8.2",
+          "queryType": "table",
+          "rawSql": "SELECT\n  toFloat64(message.x_pos)                                           AS x,\n  toFloat64(message.y_pos)                                           AS y,\n  timestamp,\n  toFloat64(toUnixTimestamp(now()) - toUnixTimestamp(timestamp))     AS age_seconds\nFROM default.uart_messages\nWHERE\n  message_type = 0\nORDER BY timestamp DESC\nLIMIT 50",
+          "refId": "A"
+        }
+      ],
+      "title": "Position",
+      "type": "xychart"
+    }
+  ],
+  "preload": false,
+  "refresh": "auto",
+  "schemaVersion": 41,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-3m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "PRAC3",
+  "uid": "bekxdh1lu29s0e",
+  "version": 16
+}
