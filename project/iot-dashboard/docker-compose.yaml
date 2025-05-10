@@ -1,0 +1,35 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123"  # HTTP interface (optional)
+      - "9000:9000"  # Native ClickHouse client
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      - CLICKHOUSE_USER=admin
+      - CLICKHOUSE_PASSWORD=admin # Set a password for the default user
+      - CLICKHOUSE_DB=database  # Optional: specify a default database
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+     - '3000:3000'
+    volumes:
+      - grafana_storage:/var/lib/grafana
+  app:
+    build: .
+    container_name: app
+    ports:
+      - "5000:5000"
+    environment:
+      - CLICKHOUSE_HOST=clickhouse
+      - FLASK_ENV=development
+    depends_on:
+      - grafana
+      - clickhouse
+volumes:
+  grafana_storage: {}
+  clickhouse_data: {}

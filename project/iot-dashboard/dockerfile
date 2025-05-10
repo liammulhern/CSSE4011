@@ -1,0 +1,34 @@
+FROM python:3.10-slim
+
+# Set working directory
+
+WORKDIR /usr/src/app
+
+# Install build and runtime dependencies
+
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends build-essential
+RUN rm -rf /var/lib/apt/lists/*
+
+# Copy and install Python dependencies
+
+COPY ./app/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application source
+
+COPY ./app .
+
+# Environment variables
+
+ENV FLASK_APP=run.py
+ENV FLASK_ENV=production
+ENV PYTHONUNBUFFERED=1
+
+# Expose the port your Flask app listens on
+
+EXPOSE 5000
+
+# Use Gunicorn as the production WSGI server
+
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "run:app", "--workers", "4", "--threads", "2", "--capture-output", "--log-level", "debug", "--error-logfile", "-", "--access-logfile", "-"]
