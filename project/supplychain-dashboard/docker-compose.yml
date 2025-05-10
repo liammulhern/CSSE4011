@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: django
+      POSTGRES_PASSWORD: django
+      POSTGRES_DB: dpp_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+  web:
+    build: .
+    # expose both HTTP and debug ports
+    ports:
+      - "8000:8000"
+      - "5678:5678"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+    # use debugpy to launch Django
+    command: >
+      uv run python -m debugpy
+      --bind 0.0.0.0:5678
+      --wait-for-client
+      manage.py runserver 0.0.0.0:8000
+
+volumes:
+  db_data:

@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Name of the Django service in docker-compose.yml
+SERVICE_NAME="web"
+# Path to your compose file (override if needed)
+COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
+# Compose command
+DC="docker compose -f ${COMPOSE_FILE}"
+
+usage() {
+  cat <<EOF
+Usage: $0 [COMMAND] [ARGS...]
+
+Common commands:
+  up                Build & start all services (detached)
+  down              Stop and remove all containers
+  logs [SERVICE]    Follow logs (default: $SERVICE_NAME)
+  migrate           Apply Django migrations
+  makemigrations    Generate Django migrations
+  createsuperuser   Create a Django superuser
+  runserver         Run Django dev server
+  shell             Django shell
+  test              Run test suite
+  <any>             Pass through to 'uv run manage.py <any>'
+
+Examples:
+  $0 up
+  $0 migrate
+  $0 runserver 0.0.0.0:8000
+  $0 logs db
+  $0 custom_command arg1 arg2
+EOF
+  exit 1
+}
+
+# Ensure the web container is running before exec’ing into it
+ensure_running() {
+  if ! $DC ps --services --filter "status=running" | grep -q "^${SERVICE_NAME}\$"; then
+    echo "→ Starting '${SERVICE_NAME}' service..."
+    $DC up -d ${SERVICE_NAME}
+    # wait a moment for initialization
+    sleep 1
+  fi
+}
+
+if [[ $# -lt 1 ]]; then
+  usage
+fi
+
+cmd="$1"; shift
+
+case "$cmd" in
+  up|down)
+    exec $DC $cmd
+    ;;
+  logs)
+    svc="${1:-$SERVICE_NAME}"
+    exec $DC logs -f "$svc"
+    ;;
+  migrate|makemigrations|createsuperuser|runserver|shell|test)
+    ensure_running
+    exec $DC exec $SERVICE_NAME uv run manage.py "$cmd" "$@"
+    ;;
+  *)
+    # any other manage.py subcommand
+    ensure_running
+    exec $DC exec $SERVICE_NAME uv run manage.py "$cmd" "$@"
+    ;;
+esac
