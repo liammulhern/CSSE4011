@@ -161,6 +161,35 @@ postgres://django:django@db:5432/dpp_db
 
 4. **Visit** http://localhost:8000 to see the running app.
 
+
+5. **Using ./dc**:
+
+   To remove boiler plate commands the shell script `./dc` acts as
+   an alias for `docker-compose exec web uv run manage.py ...`
+
+``` zsh
+Usage: ./dc [COMMAND] [ARGS...]
+
+Common commands:
+  up                Build & start all services (detached)
+  down              Stop and remove all containers
+  logs [SERVICE]    Follow logs (default: web)
+  migrate           Apply Django migrations
+  makemigrations    Generate Django migrations
+  createsuperuser   Create a Django superuser
+  runserver         Run Django dev server
+  shell             Django shell
+  test              Run test suite
+  <any>             Pass through to 'uv run manage.py <any>'
+
+Examples:
+  ./dc up
+  ./dc migrate
+  ./dc runserver 0.0.0.0:8000
+  ./dc logs db
+  ./dc custom_command arg1 arg2
+```
+
 ---
 
 ## Running Tests
