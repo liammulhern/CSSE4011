@@ -113,3 +113,32 @@ class ProductOrderAdmin(admin.ModelAdmin):
         ProductOrderItemInline,
         ProductOrderRequirementInline,
     ]
+
+
+from supplychain.models import SupplyChainRequirement
+@admin.register(SupplyChainRequirement)
+class SupplyChainRequirementAdmin(admin.ModelAdmin):
+    """
+    Admin view for supply-chain requirements.
+    """
+    list_display = (
+        'name',
+        'unit',
+        'attribute_type',
+        'company',
+        'created_timestamp',
+    )
+    list_filter = (
+        'attribute_type',
+        'unit',
+        'company',
+        'created_timestamp',
+    )
+    search_fields = (
+        'name',
+        'company__name',
+    )
+    raw_id_fields = (
+        'company',
+    )
+    date_hierarchy = 'created_timestamp'

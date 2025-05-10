@@ -227,18 +227,20 @@ class SupplyChainRequirement(models.Model):
     """
     ATTRIBUTE_NUMBER = 'number'
     ATTRIBUTE_LOCATION = 'location'
+
     ATTRIBUTE_TYPE_CHOICES = [
         (ATTRIBUTE_NUMBER, 'Number'),
         (ATTRIBUTE_LOCATION, 'Location'),
     ]
 
-    # === unit choices ===
     UNIT_DEGREES_C    = 'degrees_C'
     UNIT_REL_HUMIDITY = 'relative_%'
     UNIT_TVOC         = 'TVOC'
     UNIT_LUX          = 'Lux'
     UNIT_HPA          = 'hPa'
     UNIT_MS2          = 'm/s²'
+    UNIT_TIME         = 'seconds'
+    UNIT_DISTANCE     = 'meters'
     UNIT_LOCATION     = 'location'
 
     UNIT_CHOICES = [
@@ -249,8 +251,9 @@ class SupplyChainRequirement(models.Model):
         (UNIT_HPA,          'hPa'),
         (UNIT_MS2,          'm/s²'),
         (UNIT_LOCATION,     'Location'),
+        (UNIT_TIME,         'Seconds'),
+        (UNIT_DISTANCE,     'Meters'),
     ]
-    # ====================
 
     name = models.CharField(
         max_length=100,
@@ -271,7 +274,7 @@ class SupplyChainRequirement(models.Model):
     )
 
     company = models.ForeignKey(
-        settings.AUTH_USER_MODEL,  # or 'accounts.Company' if you import it
+        Company,
         on_delete=models.CASCADE,
         related_name='supply_requirements',
         help_text='Company that defines this requirement.'
