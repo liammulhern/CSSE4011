@@ -46,7 +46,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    subgraph Mote (Sensor Node)
+    subgraph "Mote (Sensor Node)"
       M1[Boot, Read Tag UID]
       M2["Sample Sensors<br/>(temp, humidity, GPS)"]
       M3["Hash Payload<br/>(SHA-256)"]
