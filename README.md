@@ -32,7 +32,7 @@ An end-to-end IoT + blockchain solution that creates a tamper-proof “Digital P
 
 ```mermaid
 flowchart LR
-    A[Manufactured Product<br/>(QR/NFC Tag)] -->|Scanning| B[Embedded Sensor Node<br/>(MCU+Temp/Humidity/GPS)]
+    A["Manufactured Product<br/>(QR/NFC Tag)"] -->|Scanning| B["Embedded Sensor Node<br/>(MCU+Temp/Humidity/GPS)"]
     B -->|LoRaWAN/NB-IoT| C["Edge Gateway<br/>(Raspberry Pi)"]
     C -->|MQTT → Azure IoT Hub| D[Azure IoT Hub]
     D -->|Event Processing| E[Azure Function → Cosmos DB]
