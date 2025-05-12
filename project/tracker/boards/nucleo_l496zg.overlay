@@ -1,0 +1,11 @@
+
+&i2c1 {
+    status = "okay";
+
+    neom9n: neom9n@42 {
+        status = "okay";
+        compatible = "u-blox,neom9n";
+        label = "NEOM9N";
+        reg = <0x42>;
+    };
+};
