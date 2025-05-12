@@ -1,1 +1,1 @@
-add_subdirectory_ifdef(CONFIG_UBLOX_NEO_M9N ublox-neo-m9n)
+add_subdirectory_ifdef(CONFIG_UBLOX_NEO_M9N ublox_neo_m9n)
