@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2022 Abel Sensors.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <zephyr.h>
 #include <device.h>
 #include <drivers/gnss/ublox_neo_m9n.h>
