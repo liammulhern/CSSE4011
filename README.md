@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="https://github.com/liammulhern/CSSE4011/blob/task_supplychain_dashboard/docs/images/PathLedger.png" alt="PathLedger">
+  <img src="https://github.com/liammulhern/CSSE4011/blob/task_supplychain_dashboard/docs/images/PathLedger-300-600.png" alt="PathLedger">
 </h1>
 
 [![License](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
