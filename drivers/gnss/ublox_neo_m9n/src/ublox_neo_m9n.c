@@ -6,23 +6,23 @@
 
 #define DT_DRV_COMPAT u_blox_neom9n
 
+#include <zephyr/device.h>
+#include <zephyr/drivers/i2c.h>
+#include <zephyr/kernel.h>
+#include <zephyr/sys/__assert.h>
+#include <zephyr/sys/byteorder.h>
+#include <zephyr/sys/util.h>
+#include <zephyr/logging/log.h>
+
 #include <ctype.h>
-#include <device.h>
-#include <drivers/i2c.h>
-#include <kernel.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/__assert.h>
-#include <sys/byteorder.h>
-#include <sys/util.h>
 
 #include <drivers/gnss/ublox_neo_m9n.h>
 
-#include <logging/log.h>
-
-LOG_MODULE_REGISTER(neom9n, CONFIG_NEOM9N_LOG_LEVEL);
+LOG_MODULE_REGISTER(neom9n, CONFIG_UBLOX_NEO_M9N_LOG_LEVEL);
 
 #define TO_LITTLE_ENDIAN(data, b)                                                                  \
     for (int i = 0; i < sizeof(data); i++) {                                                   \
@@ -351,8 +351,6 @@ static int neom9n_parse_data(const struct device *dev)
         }
     }
 
-    free(tmp);
-
     return 0;
 }
 
@@ -385,7 +383,7 @@ static int neom9n_fetch_data(const struct device *dev)
     struct neom9n_data *data = dev->data;
     uint16_t n_bytes;
     uint8_t c;
-    int rc;
+    int rc = 0;
 
     k_sem_take(&data->lock, K_FOREVER);
 
@@ -679,11 +677,11 @@ static const struct neom9n_api neom9n_api = {
     .get_satellites = neom9n_get_satellites,
 };
 
-#if CONFIG_NEOM9N_INIT_PRIORITY <= CONFIG_I2C_INIT_PRIORITY
-#error CONFIG_NEOM9N_INIT_PRIORITY must be greater than I2C_INIT_PRIORITY
+#if CONFIG_UBLOX_NEO_M9N_INIT_PRIORITY <= CONFIG_I2C_INIT_PRIORITY
+#error CONFIG_UBLOX_NEO_M9N_INIT_PRIORITY must be greater than I2C_INIT_PRIORITY
 #endif
 
-#define NEOM9N_INIT(n)                                                                              \
+#define UBLOX_NEO_M9N_INIT(n)                                                                              \
     static struct neom9n_data neom9n_data_##n;                                                   \
                                                                                                    \
     static const struct neom9n_config neom9n_config_##n = {                                      \
@@ -691,6 +689,6 @@ static const struct neom9n_api neom9n_api = {
     };                                                                                         \
                                                                                                    \
     DEVICE_DT_INST_DEFINE(n, neom9n_init, NULL, &neom9n_data_##n, &neom9n_config_##n,             \
-                  POST_KERNEL, CONFIG_NEOM8_INIT_PRIORITY, &neom9n_api);
+                  POST_KERNEL, CONFIG_UBLOX_NEO_M9N_INIT_PRIORITY, &neom9n_api);
 
-DT_INST_FOREACH_STATUS_OKAY(NEOM9N_INIT);
+DT_INST_FOREACH_STATUS_OKAY(UBLOX_NEO_M9N_INIT);
