@@ -1,1 +1,1 @@
-# add_subdirectory_ifdef()
+add_subdirectory_ifdef(CONFIG_GNSS gnss)

@@ -1,0 +1,8 @@
+# Copyright (c) 2022 Abel Sensors
+# SPDX-License-Identifier: Apache-2.0
+
+description: U-blox NEO-M9N GNSS Module
+
+compatible: "u-blox,neom9n"
+
+include: i2c-device.yaml
