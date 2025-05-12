@@ -1,9 +1,96 @@
+from __future__ import annotations
+
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 from accounts.models import Company
 
 import uuid
+
+
+class Tracker(models.Model):
+    """
+    Tracker device that collects sensor data for products 
+    """
+    tracker_key = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Unique identifier (e.g. NFC/QR code) for the tracker."
+    )
+
+    owner = models.ForeignKey(
+        'accounts.Company',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='products',
+        help_text="Current owning company."
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this tracker record was created."
+    )
+
+
+    class Meta:
+        ordering = ['created_timestamp']
+        verbose_name = "Product"
+        verbose_name_plural = "Products"
+
+
+class ProductType(models.Model):
+    """
+    A static product definition or SKU.
+    All manufactured products reference a ProductType.
+    """
+    product_number = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="SKU or part number for this product type."
+    )
+
+    name = models.CharField(
+        max_length=255,
+        help_text="Human‐readable name."
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="Optional longer description."
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this product type was first defined."
+    )
+
+    owner = models.ForeignKey(
+        Company,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='product_types',
+        help_text="Current owning company."
+    )
+
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='recorded_events',
+        help_text="User who recorded this event."
+    )
+
+    class Meta:
+        ordering = ["product_number"]
+        verbose_name = "Product Type"
+        verbose_name_plural = "Product Types"
+
+    def __str__(self):
+        return f"{self.product_number} — {self.name}"
 
 
 class Product(models.Model):
@@ -16,6 +103,13 @@ class Product(models.Model):
         help_text="Unique identifier (e.g. NFC/QR code) for the product."
     )
 
+    product_type = models.ForeignKey(
+        ProductType,
+        on_delete=models.PROTECT,
+        related_name="instances",
+        help_text="The SKU / type this serial belongs to."
+    )
+
     batch = models.CharField(
         max_length=100,
         blank=True,
@@ -23,7 +117,7 @@ class Product(models.Model):
     )
 
     owner = models.ForeignKey(
-        'accounts.Company',
+        Company,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
@@ -47,10 +141,23 @@ class Product(models.Model):
         )
     )
 
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='recorded_events',
+        help_text="User who recorded this event."
+    )
+
     class Meta:
         ordering = ['created_timestamp']
         verbose_name = "Product"
         verbose_name_plural = "Products"
+        indexes = [
+            models.Index(fields=['product_type']),
+            models.Index(fields=['batch']),
+        ]
 
     def __str__(self):
         return self.product_key
@@ -343,6 +450,14 @@ class ProductOrder(models.Model):
         help_text='Supply chain requirements that apply to this order.'
     )
 
+    trackers = models.ManyToManyField(
+        Tracker,
+        through='ProductOrderTracker',
+        blank=True,
+        related_name='trackers',
+        help_text='Supply chain tracker/s that apply to this order.'
+    )
+
     created_timestamp = models.DateTimeField(auto_now_add=True)
 
     created_by = models.ForeignKey(
@@ -359,11 +474,33 @@ class ProductOrder(models.Model):
         verbose_name_plural = 'Product Orders'
         ordering = ['-order_timestamp']
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f'Order #{self.pk}: {self.supplier} → {self.receiver} '
-            f'at {self.order_time.isoformat()}'
+            f'at {self.order_timestamp.isoformat()}'
         )
+
+    def current_status(self) -> ProductOrderStatus | None:
+        """
+        Return the latest status, or None if never set.
+        """
+        latest = self.status_history.order_by('-timestamp').first() # type: ignore reverse foreign key name
+
+        return latest.status if latest else None
+
+    def status_at(self, when) -> ProductOrderStatus | None:
+        """
+        Return the status of this order at the given datetime `when`.
+        If no status <= when, returns None.
+        """
+        entry = (
+            self.status_history # type: ignore reverse foreign key name
+                .filter(timestamp__lte=when)
+                .order_by('-timestamp')
+                .first()
+        )
+
+        return entry.status if entry else None
 
 
 class ProductOrderItem(models.Model):
@@ -433,3 +570,97 @@ class ProductOrderRequirement(models.Model):
             f'Requirement "{self.requirement.name}" '
             f'for Order #{self.order.pk}'
         )
+
+
+class ProductOrderTracker(models.Model):
+    """
+    Assign a tracker to a product order
+    """
+    order = models.ForeignKey(
+        ProductOrder,
+        on_delete=models.CASCADE,
+        related_name='order_trackers',
+        help_text='The order to which this requirement applies.'
+    )
+
+    tracker = models.ForeignKey(
+        Tracker,
+        on_delete=models.CASCADE,
+        related_name='order_requirements',
+        help_text='The order to which this requirement applies.'
+    )
+
+    assigned_timestamp = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text='When this tracker was physically attached to the order.'
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text='When this tracker was assigned to the order.'
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_product_order_trackers',
+        help_text="User who created this product order tracker assignement."
+    )
+
+
+class ProductOrderStatus(models.Model):
+    """
+    Records each status change for a ProductOrder, with timestamp.
+    """
+    STATUS_NEW = 'new'
+    STATUS_ON_HOLD = 'on_hold'
+    STATUS_DELAYED = 'delayed'
+    STATUS_SHIPPED = 'shipped'
+    STATUS_DELIVERED = 'delivered'
+
+    STATUS_CHOICES = [
+        (STATUS_NEW,      'New'),
+        (STATUS_ON_HOLD,  'On Hold'),
+        (STATUS_DELAYED,  'Delayed'),
+        (STATUS_SHIPPED,  'Shipped'),
+        (STATUS_DELIVERED,'Delivered'),
+    ]
+
+    order = models.ForeignKey(
+        ProductOrder,
+        on_delete=models.CASCADE,
+        related_name='status_history',
+        help_text='Order whose status is changing.'
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        help_text='New status for this order.'
+    )
+
+    timestamp = models.DateTimeField(
+        default=timezone.now,
+        help_text='When this status took effect.'
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='created_product_order_status',
+        help_text="User who created this product order status assignment."
+    )
+
+    class Meta:
+        ordering = ['timestamp']
+        verbose_name = 'Product Order Status'
+        verbose_name_plural = 'Product Order Status History'
+        get_latest_by = 'timestamp'
+
+    def __str__(self):
+        return f'{self.get_status_display()} @ {self.timestamp.isoformat()}' # type: ignore get_status_display

@@ -14,6 +14,10 @@ class Action(Enum):
     VIEW_PRODUCT = "view_product"
     DELETE_PRODUCT = "delete_product"
 
+    CREATE_PRODUCT_TYPE = "create_product_type"
+    VIEW_PRODUCT_TYPE = "view_product_type"
+    DELETE_PRODUCT_TYPE = "delete_product_type"
+
     CREATE_ORDER = "create_order"
     VIEW_ORDER = "view_order"
 
