@@ -1,10 +1,8 @@
 <h1 align="center">
-  <img src="https://raw.githubusercontent.com/liammulhern/docs/images/PathLedger.png" alt="PathLedger">
+  <img src="https://github.com/liammulhern/CSSE4011/blob/task_supplychain_dashboard/docs/images/PathLedger.png" alt="PathLedger">
 </h1>
 
 [![License](https://img.shields.io/badge/License-GPL%203.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
-# PathLedger
 
 
 # CSSE4011 Product Lifecycle Blockchain Passport
