@@ -1,3 +1,5 @@
 menu "Drivers"
 
+rsource "gnss/Kconfig"
+
 endmenu

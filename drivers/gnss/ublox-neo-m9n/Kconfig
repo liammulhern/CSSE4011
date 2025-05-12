@@ -1,0 +1,10 @@
+
+menu "Custom Driver Options"
+
+config UBLOX_NEO_M9N
+    bool "Enable ublox_neo_m9n driver"
+    default n
+    depends on I2C
+    help
+      Enable the ublox_neo_m9n driver.  Requires CONFIG_I2C_IFACE=y.
+endmenu
