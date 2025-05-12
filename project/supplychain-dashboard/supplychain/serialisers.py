@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 from rest_framework import serializers
 
 from supplychain.models import Product
+from supplychain.models import ProductType
 from supplychain.models import ProductComposition
 
 
@@ -20,6 +23,7 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'product_key',
+            'product_type',
             'batch',
             'owner',
             'created_timestamp',
@@ -28,14 +32,15 @@ class ProductSerializer(serializers.ModelSerializer):
         read_only_fields = ('created_timestamp',)
 
     def create(self, validated_data):
-        comps = validated_data.pop('composition_lines', [])
+        productcompositions = validated_data.pop('composition_lines', [])
+
         product = Product.objects.create(**validated_data)
 
-        for comp in comps:
+        for productcomposition in productcompositions:
             ProductComposition.objects.create(
                 parent=product,
-                component=comp['component'],
-                quantity=comp['quantity']
+                component=productcomposition['component'],
+                quantity=productcomposition['quantity']
             )
 
         return product
@@ -49,3 +54,36 @@ class ProductSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
+
+class ProductTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductType
+        fields = (
+            'id',
+            'product_number',
+            'name',
+            'description',
+            'created_timestamp',
+            'owner',
+            'recorded_by',
+        )
+        read_only_fields = ('created_timestamp',)
+
+    def create(self, validated_data) -> ProductType:
+
+        producttype = ProductType.objects.create(**validated_data)
+
+        return producttype
+
+    def update(self, instance, validated_data) -> ProductType:
+
+        for attr, val in validated_data.items():
+            setattr(instance, attr, val)
+
+        instance.save()
+
+        return instance
+
+
+
