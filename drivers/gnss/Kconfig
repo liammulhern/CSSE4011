@@ -1,5 +1,5 @@
 menu "GNSS"
 
-rsource "ublox-neo-m9n/Kconfig"
+rsource "ublox_neo_m9n/Kconfig"
 
 endmenu

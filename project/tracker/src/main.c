@@ -1,10 +1,10 @@
-#include <zephyr.h>
-#include <device.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/logging/log.h>
+
 #include <drivers/gnss/ublox_neo_m9n.h>
 
-#include <logging/log.h>
-
-LOG_MODULE_DECLARE(neom9n, CONFIG_NEOM9N_LOG_LEVEL);
+LOG_MODULE_DECLARE(neom9n, CONFIG_UBLOX_NEO_M9N_LOG_LEVEL);
 
 #define NEO_SERIAL DT_NODELABEL(neom9n)
 
@@ -27,8 +27,12 @@ int main(void)
 
     if (!device_is_ready(neo_dev)) {
         LOG_ERR("%s Device not ready", neo_dev->name);
-        return;
+        return 0;
     }
+
+    const struct neom9n_config *cfg = neo_dev->config;
+
+    LOG_DBG("%s", cfg->i2c_dev->name);
 
     neo_api = (struct neom9n_api *) neo_dev->api;
 
@@ -58,8 +62,8 @@ int main(void)
     while (1) {
         rc = neo_api->fetch_data(neo_dev);
         if (rc) {
-            LOG_ERR("Error %d while reading data", rc);
-            return;
+            LOG_ERR("HERE: Error %d while reading data", rc);
+            return 0;
         }
 
         if (i++ == 1000) {
@@ -76,11 +80,11 @@ int main(void)
             LOG_INF("Hour: %d\n\r", neotime.hour);
             LOG_INF("Minute: %d\n\r", neotime.min);
             LOG_INF("Second: %d\n\r", neotime.sec);
-            LOG_INF("Latitude: %.5f\n\r", lat);
+            LOG_INF("Latitude: %.5f\n\r", (double) lat);
             LOG_INF("North/South: %c\n\r", ns);
-            LOG_INF("Longitude: %.5f\n\r", lon);
+            LOG_INF("Longitude: %.5f\n\r", (double) lon);
             LOG_INF("East/West: %c\n\r", ew);
-            LOG_INF("Altitude: %.2f\n\r", alt);
+            LOG_INF("Altitude: %.2f\n\r", (double) alt);
             LOG_INF("Satellites: %d\n\r\n\r", sat);
         }
     }

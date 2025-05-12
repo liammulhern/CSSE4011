@@ -12,7 +12,7 @@ module = UBLOX_NEO_M9N
 module-str = neom9n
 source "subsys/logging/Kconfig.template.log_config"
 
-config NEOM8_INIT_PRIORITY
+config UBLOX_NEO_M9N_INIT_PRIORITY
     int "Counter init priority"
     default 80
     help
