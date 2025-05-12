@@ -1,6 +1,8 @@
 # Overview
 Receives batched tracker device data via uart and uploads to the gateway via network connection.
 
+> NOTE: This will most likely be written in python and use the Azure IoT Hub SDK
+
 # Connection
 Server runs on network and recieves uart messages to relay to Azure IoT Hub MQTT server
 
