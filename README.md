@@ -41,14 +41,15 @@ An end-to-end IoT and blockchain solution that creates a tamper-proof “Digital
 
 ```mermaid
 flowchart LR
-    A["Manufactured Product<br/>(QR/NFC Tag)"] -->|Scanning| B["Embedded Sensor Node<br/>(MCU+Temp/Humidity/GPS)"]
-    B -->|LoRaWAN/NB-IoT| C["Edge Gateway<br/>(Raspberry Pi)"]
+    A["Manufactured Product<br/>w/ QR"] -->|Assigned| B["Tracker Sensor Node<br/>(Thingy52 w/ Temp/Humidity/GPS/etc)"]
+    B -->|Bluetooth LE| C["Edge Gateway<br/>(NRF/ESP32)"]
     C -->|MQTT → Azure IoT Hub| D[Azure IoT Hub]
-    D -->|Event Processing| E[Azure Function → Cosmos DB]
-    D -->|Blockchain API| F[Blockchain Network]
-    F --> G[Smart Contract Ledger]
+    D -->|Event Processing| E[Azure Function -> Azure Postgres DB]
+    D -->|IOTA Blockchain API| F[IOTA Blockchain Tangle]
+    F --> G[IOTA Transaction Ledger]
     E --> H[Web/Mobile Dashboard]
     G --> H
+    A -->|QR Code Scanner| H
 ```
 
 ### Software Implementation Flow
