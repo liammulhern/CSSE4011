@@ -94,10 +94,11 @@ flowchart TD
 
 | Sensor Type | Data Collected        | Integration Method      |
 | ----------- | --------------------- | ----------------------- |
-| SHT31       | Temperature, Humidity | I2C, polled every 5s    |
-| MPU6050     | Shock, Angle, Motion  | I2C, triggered on event |
-| NEO-6M      | Geolocation (GPS)     | UART, polled every 10s  |
-
+| ST_LPS22HB  | Temperature, Pressure | I2C, when polled        |
+| ST_HTS221   | Humidity              | I2C, when polled        |
+| NEOM9N      | Geolocation (GPS)     | I2C, When polled        |
+| ACS_CCS811  | Air Quality           | I2C, When polled        |
+| LIS2DH12    | Accelerometer         | I2c, When polled        |
 * Data packets are encoded in compact JSON and signed with a pre-shared cryptographic key.
 * I2C buses use Zephyr RTOS drivers for sensor interfacing.
 
