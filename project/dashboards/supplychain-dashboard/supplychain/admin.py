@@ -1,7 +1,7 @@
 from django.contrib import admin
 
-from supplychain.models import ProductEvent
-@admin.register(ProductEvent)
+from supplychain.models import TrackerEvent
+@admin.register(TrackerEvent)
 class ProductEventAdmin(admin.ModelAdmin):
     list_display = ('id', 'product', 'event_type', 'timestamp', 'recorded_by')
     list_filter = ('event_type', 'timestamp', 'product')

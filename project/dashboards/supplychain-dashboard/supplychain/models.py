@@ -20,11 +20,11 @@ class Tracker(models.Model):
     )
 
     owner = models.ForeignKey(
-        'accounts.Company',
+        Company,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='products',
+        related_name='trackers',
         help_text="Current owning company."
     )
 
@@ -36,8 +36,45 @@ class Tracker(models.Model):
 
     class Meta:
         ordering = ['created_timestamp']
-        verbose_name = "Product"
-        verbose_name_plural = "Products"
+        verbose_name = "Tracker"
+        verbose_name_plural = "Trackers"
+        indexes = [
+            models.Index(fields=['tracker_key']),
+        ]
+
+
+class Gateway(models.Model):
+    """
+    Tracker device that collects sensor data for products 
+    """
+    gateway_key = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Unique identifier (e.g. NFC/QR code) for the gateway."
+    )
+
+    owner = models.ForeignKey(
+        Company,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='gateways',
+        help_text="Current owning company."
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this tracker record was created."
+    )
+
+
+    class Meta:
+        ordering = ['created_timestamp']
+        verbose_name = "Gatway"
+        verbose_name_plural = "Gatways"
+        indexes = [
+            models.Index(fields=['gateway_key']),
+        ]
 
 
 class ProductType(models.Model):
@@ -163,11 +200,92 @@ class Product(models.Model):
         return self.product_key
 
 
+class TrackerEventRaw(models.Model):
+    """
+        Records a raw event from a gateway to be converted into ProductEvent a anchored on-chain/off-chain.
+    """
+
+
+class GatewayEventRaw(models.Model):
+    """
+        Records a raw event from a gateway to be converted into ProductEvent a anchored on-chain/off-chain.
+    """
+    MESSAGE_TYPE_TELEMETRY = "telemetry"
+    MESSAGE_TYPE_BATCH_TELEMETRY = "batch_telemetry"
+    MESSAGE_TYPE_EVENT = "event"
+    MESSAGE_TYPE_HEARTBEAT = "heartbeat"
+
+
+    MESSAGE_TYPE_CHOICES = [
+        (MESSAGE_TYPE_TELEMETRY, "Telemetry"),
+        (MESSAGE_TYPE_BATCH_TELEMETRY, "Batch Telemetry"),
+        (MESSAGE_TYPE_EVENT, "Event"),
+        (MESSAGE_TYPE_HEARTBEAT, "Heart Beat"),
+    ]
+
+    message_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text="Unique event identifier."
+    )
+
+    gateway_id = models.CharField(
+        max_length=20,
+        help_text="Unique gateway identifier"
+
+    )
+
+    message_type = models.CharField(
+        max_length=20,
+        choices=MESSAGE_TYPE_CHOICES,
+        help_text='Unit of measurement for this requirement.'
+    )
+
+    payload = models.JSONField(
+        help_text=(
+            'JSON parameters for this payload. '
+            'E.g. {"deviceId":1.0,"nominal":4.0,"max":8.0} '
+        )
+    )
+
+    timestamp = models.DateTimeField(
+        help_text="When the event occurred."
+    )
+
+    block_id = models.CharField(
+        max_length=256,
+        help_text='Unit of measurement for this requirement.'
+    )
+
+    data_hash = models.CharField(
+        max_length=64,
+        help_text="SHA-256 hash of the raw payload."
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this record was created in the dashboard database."
+    )
+
+    class Meta:
+        ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['product', 'timestamp']),
+            models.Index(fields=['data_hash']),
+        ]
+        verbose_name = "Product Event"
+        verbose_name_plural = "Product Events"
+
+    def __str__(self):
+        return f"{self.event_type} @ {self.timestamp.isoformat()} for {self.product}"
+
+
 class ProductEvent(models.Model):
     """
     Records an event in a product's lifecycle, anchored on-chain/off-chain.
     """
-    id = models.UUIDField(
+    message_id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
         editable=False,
