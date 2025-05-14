@@ -155,31 +155,31 @@ A refrigerated medical shipment must maintain <8°C. A temperature spike is dete
 
 ### Task Allocation (by Role)
 
-| ID  | Task                   | Description                                                       | Assigned To | Difficulty |
-| --- | ---------------------- | ----------------------------------------------------------------- | ----------- | ---------- |
-| T1  | Requirement Analysis   | Define objectives, constraints, stakeholders                      | All         | Medium     |
-| T2  | Hardware Selection     | Select Thingy52, sensors, and comm modules                        | Alex        | Medium     |
-| T3  | Sensor Firmware        | Zephyr RTOS firmware: sensor polling, JSON encoding, cryptography | All         | High       |
-| T4  | Edge Gateway           | MQTT gateway and buffer relay on Azure                            | Liam        | Medium     |
-| T5  | Secure Transmission    | MQTT over TLS, ECDSA signing                                      | Liam        | High       |
-| T6  | Blockchain Integration | Smart contract deployment, hash storage using IOTA                | Liam        | Very High  |
-| T7  | Off-chain Storage      | Azure Postgres DB for raw data, indexing                          | Liam        | High       |
-| T8  | REST API Backend       | Flask or Django backend to serve dashboard and ingest sensor data | Liam        | High       |
-| T9  | Dashboard Frontend     | React or Vue UI with traceability view, product search            | Liam        | Medium     |
-| T10 | ABAC Auth Engine       | Implement JWT and role-based access to dashboard/API              | Liam        | Medium     |
-| T11 | Alerting System        | Evaluate telemetry against order specs + notification logic       | All         | Medium     |
-| T12 | QR/NFC Tag Encoding    | Generate product QR codes, NFC tag handling                       | All         | Medium     |
-| T13 | Client Order Interface | UI for clients to submit order constraints                        | Liam        | Medium     |
-| T14 | Integration Testing    | Validate end-to-end telemetry flow                                | All         | High       |
-| T15 | Security Review        | Simulate tampering and penetration testing                        | All         | High       |
-| T16 | Demo and Documentation | Create setup guide, diagrams, final system walkthrough            | All         | Medium     |
-| T17 | Tracker CLI commands | Add CLI to tracker node for manufacturer settings | Alex | Medium |
-| T18 | Gateway CLI commands | Add CLI to gateway base for manufacturer settings | Ryan | Medium |
-| T19 | Tracker Non-volatile Data | Implement non-volatile data storage to mobile tracker for persistent memory | Alex | Hard |
-| T20 | Gateway BLE | Bluetooth low energy GATT interface on gateway  | Ryan | Very Hard |
-| T21 | Tracker BLE | Bluetooth low energy GATT interface on tracker | Ryan | Very Hard |
-| T22 | Gateway Network | Transmit tracker data from gateway to IoT Hub | Alex | Hard |
-| T23 | Low power operation | Apply power management for tracker  | Alex | Hard |
+| ID   | Task                     | Description                                                                 | Assigned To | Difficulty  |
+|------|--------------------------|-----------------------------------------------------------------------------|-------------|-------------|
+| T1   | Requirement Analysis     | Define objectives, constraints, stakeholders                                | All         | Medium      |
+| T2   | Hardware Selection       | Select Thingy52, sensors, and comm modules                                  | Alex        | Medium      |
+| T3   | Sensor Firmware          | Zephyr RTOS firmware: sensor polling, JSON encoding, cryptography           | All         | High        |
+| T4   | Edge Gateway             | MQTT gateway and buffer relay on Azure                                      | Liam        | Medium      |
+| T5   | Secure Transmission      | MQTT over TLS, ECDSA signing                                                | Liam        | High        |
+| T6   | Blockchain Integration   | Smart contract deployment, hash storage using IOTA                          | Liam        | Very High   |
+| T7   | Off-chain Storage        | Azure Postgres DB for raw data, indexing                                    | Liam        | High        |
+| T8   | REST API Backend         | Flask or Django backend to serve dashboard and ingest sensor data           | Liam        | High        |
+| T9   | Dashboard Frontend       | React or Vue UI with traceability view, product search                      | Liam        | Medium      |
+| T10  | ABAC Auth Engine         | Implement JWT and role-based access to dashboard/API                        | Liam        | Medium      |
+| T11  | Alerting System          | Evaluate telemetry against order specs + notification logic                 | All         | Medium      |
+| T12  | QR/NFC Tag Encoding      | Generate product QR codes, NFC tag handling                                 | All         | Medium      |
+| T13  | Client Order Interface   | UI for clients to submit order constraints                                  | Liam        | Medium      |
+| T14  | Integration Testing      | Validate end-to-end telemetry flow                                          | All         | High        |
+| T15  | Security Review          | Simulate tampering and penetration testing                                  | All         | High        |
+| T16  | Demo and Documentation   | Create setup guide, diagrams, final system walkthrough                      | All         | Medium      |
+| T17  | Tracker CLI Commands     | Add CLI to tracker node for manufacturer settings                           | Alex        | Medium      |
+| T18  | Gateway CLI Commands     | Add CLI to gateway base for manufacturer settings                           | Ryan        | Medium      |
+| T19  | Tracker Non-volatile Data| Implement non-volatile data storage to mobile tracker for persistent memory | Alex        | Hard        |
+| T20  | Gateway BLE              | Bluetooth low energy GATT interface on gateway                              | Ryan        | Very Hard   |
+| T21  | Tracker BLE              | Bluetooth low energy GATT interface on tracker                              | Ryan        | Very Hard   |
+| T22  | Gateway Network          | Transmit tracker data from gateway to IoT Hub                               | Alex        | Hard        |
+| T23  | Low Power Operation      | Apply power management for tracker                                          | Alex        | Hard        |
 
 ### Gantt Chart
 
