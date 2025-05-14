@@ -10,7 +10,7 @@
 
 # Team Members
 
-* Alexander Strang ()
+* Alexander Strang (47423510)
 * Liam Mulhern (47428748)
 * Ryan Smith ()
 
@@ -18,7 +18,7 @@
 
 ## Project and Scenario Description
 
-An end-to-end IoT + blockchain solution that creates a tamper-proof “Digital Product Passport” (DPP) for physical goods. Each manufactured product carries a unique QR code that encodes a link to the user dashboard with JWT for authentication and hash to its blockchain model. Embedded sensor nodes (e.g. thingy52) record environmental data (temperature, humidity, location, custody transfers, impact) throughout the supply chain, hashing and anchoring snapshots on the IOTA blockchain. Clients placing a product order specify the requirements that the products must be subject to while in distribution. They are then alerted if the product exceeds these specifications. Sensor nodes also offer an NFC interface that can be scanned and link to the user dashboard identifying alerts. Stakeholders—from suppliers to consumers—scan the QR code to instantly verify provenance, integrity, and handling history, improving trust, compliance, and recall responsiveness.
+An end-to-end IoT and blockchain solution that creates a tamper-proof “Digital Product Passport” (DPP) for physical goods. Each manufactured product carries a unique QR code that links to an encoded user dashboard with a JSON Web Token (JWT) for authentication and hash to its blockchain model. Embedded sensor nodes attached to the mobile device (e.g. thingy52) record environmental data (temperature, humidity, location, pressure, custody transfers, Evoc Gas levels) throughout the supply chain, anchoring the hashed data to the IOTA blockchain. Clients placing a product order, specify the requirements that the products must be subject to while in distribution, and the levels are then monitored by the tracker. They are then alerted if the product exceeds these specifications. Mobile nodes also offer a Near Field Communication (NFC) interface that can be scanned and linked to the user dashboard, highlighting alerts. Allowing stakeholders to scan the QR code to instantly verify provenance, integrity and handling history, improving trust, compliance, and recall responsiveness.
 
 ---
 
@@ -26,12 +26,12 @@ An end-to-end IoT + blockchain solution that creates a tamper-proof “Digital P
 
 | Deliverable                                                                            | KPI / Success Metric                                                  |
 | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **1. IoT Sensor Prototype**<br>MCU firmware for environmental sensing and tagging.     | ≥ 99 % packet delivery rate over LoRaWAN/NB-IoT in tests.             |
-| **2. Blockchain Smart Contract**<br>Permissioned chain contract to store event hashes. | Record ≥ 1 000 on-chain events without error.                         |
-| **3. Off-chain Data Store Integration**<br>Raw sensor logs in Azure Cosmos DB or IPFS. | Average write latency < 200 ms; ≥ 99.9 % data durability.             |
-| **4. Web/Mobile Dashboard**<br>DPP lookup, analytics, alerting UI.                     | Page load ≤ 300 ms; user task success rate ≥ 95 % in usability tests. |
+| **1. IoT Sensor Prototype**<br>MCU firmware for environmental sensing and tagging.     | ≥ 99 % packet delivery rate over bluetooth in tests.                  |
+| **2. Blockchain Smart Contract**<br>Permissioned chain contract to store event hashes. | Record all on-chain events without error.                             |
+| **3. Off-chain Data Store Integration**<br>Raw sensor logs in Azure Postgres SQL DB    | Average write latency < 200 ms; ≥ 99.9 % data durability.             |
+| **4. Web/Mobile Dashboard**<br>DPP lookup, analytics, alerting UI.                     | Displays relevant data for users based on relevant permission         |
 | **5. ABAC Permission Engine**<br>Attribute-based access control for all stakeholders.  | 100 % enforcement of role policies in penetration tests.              |
-| **6. End-to-End Traceability Demo**<br>Consumer-facing app scan → full history.        | Time to display full provenance ≤ 5 s; zero incorrect records.        |
+| **6. End-to-End Traceability Demo**<br>Consumers can view a package's full history.    | Time to display full provenance ≤ 5 s; zero incorrect records.        |
 
 ---
 
