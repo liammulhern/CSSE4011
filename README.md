@@ -185,34 +185,40 @@ A refrigerated medical shipment must maintain <8°C. A temperature spike is dete
 
 ```mermaid
 gantt
-    title PathLedger Project Timeline (May 13 – May 30)
+    title IoT Blockchain Supply Chain Project (May 13–30)
     dateFormat  YYYY-MM-DD
-    excludes weekends
+    axisFormat  %b %d
 
-    section Planning
-    Requirement Analysis        :a1, 2025-05-13, 2d
+    section All
+    Requirement Analysis           :T1, 2025-05-13, 2d
+    QR/NFC Tag Encoding            :T12, after T1, 2d
+    Sensor Firmware                :T3, after T2, 3d
+    Alerting System                :T11, after T8, 2d
+    Integration Testing            :T14, after T9, 2d
+    Security Review                :T15, after T14, 1d
+    Demo & Documentation           :T16, after T15, 1d
 
-    section Embedded Systems (Liam)
-    Hardware Selection          :a2, after a1, 1d
-    Sensor Firmware             :a3, after a2, 4d
-    Edge Gateway                :a4, after a3, 2d
-    Secure Transmission         :a5, after a4, 3d
-    QR/NFC Tag Encoding         :a6, after a5, 1d
+    section Alex
+    Hardware Selection             :T2, after T1, 2d
+    Tracker CLI commands           :T17, after T3, 2d
+    Tracker Non-volatile Data      :T19, after T3, 4d
+    Low power operation            :T23, after T3, 4d
+    Gateway Network                :T22, after T5, 4d
 
-    section Backend (Ryan)
-    Blockchain Integration      :b1, 2025-05-13, 5d
-    Off-chain Storage           :b2, after b1, 3d
-    REST API Backend            :b3, after b2, 4d
-    Security Review             :b4, after b3, 1d
+    section Liam
+    Edge Gateway                   :T4, after T2, 2d
+    Secure Transmission            :T5, after T4, 3d
+    Blockchain Integration         :T6, after T5, 4d
+    Off-chain Storage              :T7, after T4, 3d
+    REST API Backend               :T8, after T7, 3d
+    Dashboard Frontend             :T9, after T8, 2d
+    ABAC Auth Engine               :T10, after T8, 2d
+    Client Order Interface         :T13, after T10, 2d
 
-    section Dashboard & Auth (Alex)
-    Dashboard Frontend          :c1, 2025-05-13, 3d
-    ABAC Auth Engine            :c2, after c1, 2d
-    Alerting System             :c3, after c2, 2d
-    Client Order Interface      :c4, after c3, 2d
-
-    section Final Integration
-    Demo and Documentation      :d1, after a6, 1d
+    section Ryan
+    Gateway CLI commands           :T18, after T4, 2d
+    Gateway BLE                    :T20, after T4, 6d
+    Tracker BLE                    :T21, after T3, 6d
 ```
 
 
