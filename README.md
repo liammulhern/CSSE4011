@@ -57,10 +57,10 @@ flowchart LR
 ```mermaid
 flowchart TD
     subgraph "Mote (Sensor Node)"
-      M1[Boot, Read Tag UID]
-      M2["Sample Sensors<br/>(temp, humidity, GPS)"]
+      M1[Boot]
+      M2["Sample Sensors<br/>(temp, humidity, GPS, etc)"]
       M3["Hash Payload<br/>(SHA-256)"]
-      M4[Transmit via LoRa/MQTT]
+      M4[Transmit via BLE]
       M1 --> M2 --> M3 --> M4
     end
 
@@ -92,8 +92,6 @@ flowchart TD
 
 ## Sensor Integration
 
-> TODO: Change this as it is auto generated
-
 | Sensor Type | Data Collected        | Integration Method      |
 | ----------- | --------------------- | ----------------------- |
 | SHT31       | Temperature, Humidity | I2C, polled every 5s    |
@@ -110,36 +108,30 @@ flowchart TD
 ### Network Topology
 
 * Star topology with central Edge Gateway node
-* MQTT or HTTPS REST uplink to server
+* MQTT uplink to server
 
 ### Message Protocol Diagram
 
 ```mermaid
 sequenceDiagram
-    participant SensorNode
+    participant TrackerNode
     participant Gateway
     participant Server
 
-    SensorNode->>"Gateway: POST /data (JSON + Signature)"
+    TrackerNode->>Gateway: "POST /data (JSON + Signature)"
     Gateway->>Server: Forward packet
     Server->>Blockchain: Store hash of packet
     Server-->>Dashboard: Update data view
 ```
 
-### Data Rate
-
-* Average message size: 200 bytes
-* Frequency: 1 message/10 seconds
-* Uplink bandwidth: \~20 bytes/sec/node
-
 ---
 
 ## Algorithm Schemes (Blockchain)
 
-* **Blockchain Layer**: Hyperledger Fabric / IOTA MAM
+* **Blockchain Layer**: IOTA MAM
 * **Hashing**: SHA-256 hash of payloads
 * **Verification**: Packet signatures checked using ECDSA
-* **Storage**: Off-chain data in IPFS, on-chain metadata on Hyperledger
+* **Storage**: Off-chain data in Azure Postgres DB, on-chain metadata in IOTA Tangle
 
 ---
 
