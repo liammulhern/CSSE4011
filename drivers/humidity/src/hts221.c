@@ -8,15 +8,15 @@ int init_hts221(struct device *st_hts221) {
 }
 
 int fetch_hts221(struct device *st_hts221, double *humidity) {
-    double hum_raw;
+    struct sensor_value hum_raw;
     if (sensor_sample_fetch(st_hts221) < 0) {
         // Sample update error
-        return -1;
+        return -EIO;
     }
 
     if (sensor_channel_get(st_hts221, SENSOR_CHAN_HUMIDITY, &hum_raw) < 0) {
         // pressure channel reading error
-        return -2;
+        return -EIO;
     }
 
     *humidity = sensor_value_to_double(&hum_raw);
