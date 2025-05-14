@@ -1,1 +1,4 @@
 add_subdirectory_ifdef(CONFIG_GNSS gnss)
+add_subdirectory_ifdef(CONFIG_TEMP temp)
+add_subdirectory_ifdef(CONFIG_HUMIDITY humidity)
+add_subdirectory_ifdef(CONFIG_EVOC evoc)
