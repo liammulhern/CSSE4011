@@ -7,7 +7,7 @@ services:
       POSTGRES_DB: dpp_db
     volumes:
       - db_data:/var/lib/postgresql/data
-  web:
+  pathledger-backend:
     build:
       context: .
       target: dev
@@ -20,11 +20,5 @@ services:
       - .env
     depends_on:
       - db
-    # use debugpy to launch Django
-    command: >
-      uv run python -Xfrozen_modules=off -m debugpy
-      --listen 0.0.0.0:5678
-      manage.py runserver 0.0.0.0:8000
-
 volumes:
   db_data:

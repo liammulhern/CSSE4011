@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Name of the Django service in docker-compose.yml
-SERVICE_NAME="web"
+SERVICE_NAME="pathledger-backend"
 # Path to your compose file (override if needed)
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
 # Compose command

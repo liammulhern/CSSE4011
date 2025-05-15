@@ -8,7 +8,7 @@ RUN rm -rf /var/lib/apt/lists/*
 # Create a non-root user (optional, but recommended)
 RUN useradd --create-home appuser
 
-WORKDIR /home/appuser
+WORKDIR /home/appuser/pathledger-backend
 
 # Install uv for dependency management
 RUN pip install --no-cache-dir uv
