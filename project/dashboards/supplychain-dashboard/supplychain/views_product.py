@@ -51,6 +51,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         return super().destroy(request, *args, **kwargs)
 
+
 class ProductTypeViewSet(viewsets.ModelViewSet):
     """
     CRUD API for ProductTypes with ABAC-enforced permissions.

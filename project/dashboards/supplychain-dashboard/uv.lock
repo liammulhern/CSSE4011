@@ -12,6 +12,15 @@ wheels = [
 ]
 
 [[package]]
+name = "dacite"
+version = "1.9.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/55/a0/7ca79796e799a3e782045d29bf052b5cde7439a2bbb17f15ff44f7aacc63/dacite-1.9.2.tar.gz", hash = "sha256:6ccc3b299727c7aa17582f0021f6ae14d5de47c7227932c47fec4cdfefd26f09", size = 22420, upload-time = "2025-02-05T09:27:29.757Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/94/35/386550fd60316d1e37eccdda609b074113298f23cef5bddb2049823fe666/dacite-1.9.2-py3-none-any.whl", hash = "sha256:053f7c3f5128ca2e9aceb66892b1a3c8936d02c686e707bee96e19deef4bc4a0", size = 16600, upload-time = "2025-02-05T09:27:24.345Z" },
+]
+
+[[package]]
 name = "debugpy"
 version = "1.8.14"
 source = { registry = "https://pypi.org/simple" }
@@ -152,6 +161,24 @@ wheels = [
 ]
 
 [[package]]
+name = "iota-sdk"
+version = "1.1.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dacite" },
+    { name = "pyhumps" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/58/15/927a6103354879e86965fdba9034b705a60c8070dc59756e3ec09dbbc649/iota_sdk-1.1.4-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:bd6cdb26bbc73566f9f22ee212c81effcd8c86f60d97de77a5c53b55aacceccc", size = 7594984, upload-time = "2024-05-07T06:54:38.081Z" },
+    { url = "https://files.pythonhosted.org/packages/ee/4c/8eb9e4fe6c75592215dc73be99802677392d9222edda3eda4a83bb14252f/iota_sdk-1.1.4-cp311-cp311-manylinux_2_31_x86_64.whl", hash = "sha256:d013f49abda01b385253c6447884d3e9137e2eae5ad40dbdc1b2620f64c0a1b3", size = 8926456, upload-time = "2024-05-07T06:54:40.638Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/e5/79a6ee5cd70c43ea00fc8c5d19456093ab0a04e68e1883954e1cb693dec8/iota_sdk-1.1.4-cp311-cp311-manylinux_2_35_x86_64.whl", hash = "sha256:6b92fc85d22e05f5b32b0693e1e1a3c37d700fa3b662b97e114962e3930e9ba0", size = 9057137, upload-time = "2024-05-07T06:54:43.2Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/ec/b5147000a10f09bbf591c775f1b67b821852a454ae48f09dabab792c232d/iota_sdk-1.1.4-cp311-none-win_amd64.whl", hash = "sha256:8941db47c37edfeb42a8642b2a26bc8a6d8f4bea70261eed2cf1c771bcfb1d61", size = 8457508, upload-time = "2024-05-07T06:54:45.848Z" },
+    { url = "https://files.pythonhosted.org/packages/2d/b5/e52106ae9d8d69be8628f341ab24af1cc99187ef48532f68fa4cd2379630/iota_sdk-1.1.4-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ba24f2a3377db2dcb07e85ca50746264aa8dde06e085e79ec3b37415b74bd862", size = 7596190, upload-time = "2024-05-07T06:54:49.525Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/e9/77fbca172acf9dc323b246e0fff78d32bee50038ec8e6438d79b9284d8d0/iota_sdk-1.1.4-cp312-cp312-manylinux_2_35_x86_64.whl", hash = "sha256:97b63bffeb6f6e30a33be4423d8d91a6c02276b693f269128ebd0fbc8a0caa28", size = 9056279, upload-time = "2024-05-07T06:54:52.098Z" },
+    { url = "https://files.pythonhosted.org/packages/56/e2/f588cdce770d574c863dbf2ea301f7c3b5babb36c5a06e9fbdaec59c8fc6/iota_sdk-1.1.4-cp312-none-win_amd64.whl", hash = "sha256:3cc42f6be146dbb13e30f435ca07bfc57ee43ef84c24b38cf6c66c63bc4d64dd", size = 8457869, upload-time = "2024-05-07T06:54:54.947Z" },
+]
+
+[[package]]
 name = "packaging"
 version = "25.0"
 source = { registry = "https://pypi.org/simple" }
@@ -204,6 +231,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pyhumps"
+version = "3.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/83/fa6f8fb7accb21f39e8f2b6a18f76f6d90626bdb0a5e5448e5cc9b8ab014/pyhumps-3.8.0.tar.gz", hash = "sha256:498026258f7ee1a8e447c2e28526c0bea9407f9a59c03260aee4bd6c04d681a3", size = 9018, upload-time = "2022-10-21T10:38:59.496Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9e/11/a1938340ecb32d71e47ad4914843775011e6e9da59ba1229f181fef3119e/pyhumps-3.8.0-py3-none-any.whl", hash = "sha256:060e1954d9069f428232a1adda165db0b9d8dfdce1d265d36df7fbff540acfd6", size = 6095, upload-time = "2022-10-21T10:38:58.231Z" },
+]
+
+[[package]]
 name = "pyjwt"
 version = "2.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -244,6 +280,7 @@ dependencies = [
     { name = "djangorestframework" },
     { name = "djangorestframework-simplejwt" },
     { name = "gunicorn" },
+    { name = "iota-sdk" },
     { name = "psycopg2-binary" },
     { name = "python-dotenv" },
 ]
@@ -259,6 +296,7 @@ requires-dist = [
     { name = "djangorestframework", specifier = ">=3.14,<4" },
     { name = "djangorestframework-simplejwt", specifier = ">=5.2" },
     { name = "gunicorn", specifier = ">=20.1" },
+    { name = "iota-sdk", specifier = ">=1.1.4" },
     { name = "psycopg2-binary", specifier = ">=2.9" },
     { name = "python-dotenv", specifier = ">=0.21" },
 ]

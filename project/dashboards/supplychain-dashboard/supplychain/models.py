@@ -14,7 +14,6 @@ import json
 import uuid
 import hashlib
 
-
 class Tracker(models.Model):
     """
     Tracker device that collects sensor data for products 
@@ -123,7 +122,7 @@ class ProductType(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='recorded_events',
+        related_name='recorded_producttypes',
         help_text="User who recorded this event."
     )
 
@@ -150,7 +149,9 @@ class Product(models.Model):
         ProductType,
         on_delete=models.PROTECT,
         related_name="instances",
-        help_text="The SKU / type this serial belongs to."
+        help_text="The SKU / type this serial belongs to.",
+        null=True,
+        blank=True
     )
 
     batch = models.CharField(
@@ -189,7 +190,7 @@ class Product(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='recorded_events',
+        related_name='recorded_products',
         help_text="User who recorded this event."
     )
 
@@ -249,19 +250,11 @@ class GatewayEventRaw(models.Model):
         )
     )
 
+
     timestamp = models.DateTimeField(
         help_text="When the event occurred."
     )
 
-    block_id = models.CharField(
-        max_length=256,
-        help_text='Unit of measurement for this requirement.'
-    )
-
-    data_hash = models.CharField(
-        max_length=64,
-        help_text="SHA-256 hash of the raw payload."
-    )
 
     created_timestamp = models.DateTimeField(
         auto_now_add=True,
@@ -271,14 +264,13 @@ class GatewayEventRaw(models.Model):
     class Meta:
         ordering = ['timestamp']
         indexes = [
-            models.Index(fields=['product', 'timestamp']),
-            models.Index(fields=['data_hash']),
+            models.Index(fields=['gateway_id', 'timestamp']),
         ]
-        verbose_name = "Product Event"
-        verbose_name_plural = "Product Events"
+        verbose_name = "Gateway Event"
+        verbose_name_plural = "Gateway Events"
 
     def __str__(self):
-        return f"{self.event_type} @ {self.timestamp.isoformat()} for {self.product}"
+        return f"{self.message_type} @ {self.timestamp.isoformat()} for {self.gateway_id}"
 
 
 class ProductEvent(models.Model):
@@ -295,7 +287,7 @@ class ProductEvent(models.Model):
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
-        related_name='events',
+        related_name='productevents',
         help_text="Product to which this event applies."
     )
 
@@ -330,7 +322,7 @@ class ProductEvent(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='recorded_events',
+        related_name='recorded_productevents',
         help_text="User who recorded this event."
     )
 
@@ -383,7 +375,7 @@ class ProductEvent(models.Model):
             Return:
                 True if the on-chain hash matches the off-chain model
         """
-        chain_message_id, chain_hash = iota_client.iota_get_block_data(self)
+        chain_message_id, chain_hash = iota_client.iota_get_block_data(self.message_id)
 
         model_hash: HexStr  = self.compute_hash()
 

@@ -1,11 +1,34 @@
 from django.contrib import admin
 
-from supplychain.models import TrackerEvent
-@admin.register(TrackerEvent)
+from supplychain.models import ProductEvent
+@admin.register(ProductEvent)
 class ProductEventAdmin(admin.ModelAdmin):
-    list_display = ('id', 'product', 'event_type', 'timestamp', 'recorded_by')
+    list_display = ('message_id', 'product', 'event_type', 'timestamp', 'recorded_by')
     list_filter = ('event_type', 'timestamp', 'product')
     search_fields = ('data_hash',)
+
+
+from supplychain.models import ProductType
+@admin.register(ProductType)
+class ProductTypeAdmin(admin.ModelAdmin):
+    list_display = ('product_number', 'name', 'owner', 'recorded_by')
+    list_filter = ('owner',)
+    search_fields = ('product_number', 'name')
+
+from supplychain.models import Gateway
+@admin.register(Gateway)
+class GatewayAdmin(admin.ModelAdmin):
+    list_display = ('gateway_key', 'owner', 'created_timestamp')
+    list_filter = ('owner',)
+    search_fields = ('gateway_key',)
+
+
+from supplychain.models import GatewayEventRaw
+@admin.register(GatewayEventRaw)
+class GatewayEventRaw(admin.ModelAdmin):
+    list_display = ('message_id', 'gateway_id', 'message_type')
+    list_filter = ('gateway_id', 'message_type')
+    search_fields = ('gateway_id',)
 
 
 from supplychain.models import CustodyTransfer

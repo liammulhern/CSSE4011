@@ -23,7 +23,7 @@ RUN uv sync
 FROM base AS dev
 # expose for debug
 EXPOSE 8000 5678
-CMD ["uv", "run", "python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "--wait-for-client", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["uv", "run", "python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "manage.py", "runserver", "0.0.0.0:8000"]
 
 # # Production image
 FROM base AS prod
