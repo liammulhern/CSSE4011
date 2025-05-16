@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from iota_sdk import HexStr
+
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
 from accounts.models import Company
 
+from supplychain.scripts import iota_client
+
+import json
 import uuid
+import hashlib
 
 
 class Tracker(models.Model):
@@ -200,12 +206,6 @@ class Product(models.Model):
         return self.product_key
 
 
-class TrackerEventRaw(models.Model):
-    """
-        Records a raw event from a gateway to be converted into ProductEvent a anchored on-chain/off-chain.
-    """
-
-
 class GatewayEventRaw(models.Model):
     """
         Records a raw event from a gateway to be converted into ProductEvent a anchored on-chain/off-chain.
@@ -304,6 +304,13 @@ class ProductEvent(models.Model):
         help_text="Type of event (e.g. 'manufactured', 'temperature_reading')."
     )
 
+    payload = models.JSONField(
+        help_text=(
+            'JSON parameters for this payload. '
+            'E.g. {"deviceId": 1.0,"nominal": 4.0,"max": 8.0} '
+        )
+    )
+
     timestamp = models.DateTimeField(
         help_text="When the event occurred."
     )
@@ -343,6 +350,44 @@ class ProductEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} @ {self.timestamp.isoformat()} for {self.product}"
+
+    def compute_hash(self) -> HexStr:
+        """
+            SHA-256 over payload and message with sorted keys.
+
+            Returns:
+                HexString for hashed ProductEvent
+
+                e.g. "0x12398a12bc14e09"
+        """
+        serialized_key: str = json.dumps(
+            {
+                "message_id": self.message_id, 
+                "payload": self.payload
+            },
+            sort_keys=True
+        )
+
+        serialized_key_enc = hashlib.sha256(serialized_key.encode("utf-8")).hexdigest()
+
+        return HexStr(serialized_key_enc)
+
+    def verify_block_hash(self) -> bool:
+        """
+            Verify that an IOTA block has the same hash as the 
+            database model.
+
+            Args:
+                block: IOTA blockchain 
+
+            Return:
+                True if the on-chain hash matches the off-chain model
+        """
+        chain_message_id, chain_hash = iota_client.iota_get_block_data(self)
+
+        model_hash: HexStr  = self.compute_hash()
+
+        return chain_message_id == self.message_id and model_hash == chain_hash
 
 
 class ProductComposition(models.Model):

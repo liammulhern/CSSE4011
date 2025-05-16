@@ -61,6 +61,7 @@ int main(void)
 
     while (1) {
         rc = neo_api->fetch_data(neo_dev);
+
         if (rc) {
             LOG_ERR("HERE: Error %d while reading data", rc);
             return 0;

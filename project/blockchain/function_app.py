@@ -25,8 +25,6 @@ def process_sensor_data_function(event: func.EventHubEvent):
     body  = event.get_body().decode("utf-8")
     record = json.loads(body)
 
-    # TODO: Get each individual tracker message if batch_telemetry
-
     # Compute SHA‐256 digest
     digest = compute_hash(record["messageId"], record["payload"])
 
@@ -34,7 +32,7 @@ def process_sensor_data_function(event: func.EventHubEvent):
     block_id = anchor_on_iota(record["messageId"], digest)
 
     # Store complete record off‐chain
-    msg_id = store_offchain(record, blockId)
+    msg_id = store_offchain(record, block_id)
 
     logging.info(f"Anchored msg {msg_id} as IOTA block {block_id}")
 
