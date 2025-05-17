@@ -1,0 +1,3 @@
+azure-functions
+iota-sdk
+psycopg2-binary
