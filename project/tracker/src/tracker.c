@@ -26,7 +26,8 @@
 #define NEO_SERIAL DT_NODELABEL(neom9n)
 
 
-
+#define LED_MAX 255
+#define LED_OFF 0
 #define NUMBER_OF_LEDS 3
 #define GREEN_LED DT_GPIO_PIN(DT_NODELABEL(led0), gpios)
 #define BLUE_LED DT_GPIO_PIN(DT_NODELABEL(led1), gpios)
@@ -37,11 +38,12 @@ static const gpio_pin_t rgb_pins[] = {
 	GREEN_LED,
 	BLUE_LED,
 };
+
 const struct device *sx1509b_dev;
 
 #define ALARM_CHANNEL_ID 0
 #define UPDATE 20000// Update window (interrupts)
-
+#define SAMPLE_RATE 1000 // Time between samples grabbed in a row while awake
 LOG_MODULE_REGISTER(tracker, LOG_LEVEL_INF);
 
 struct counter_top_cfg ctr_top;
@@ -240,9 +242,10 @@ int read_loop(const struct device *flash_dev) {
     flash_read(flash_dev, 0, &size, sizeof(int));
     struct sensor_blk sensors;
     // Unpacks data since last bluetooth grab
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 0);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 255);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 0);
+    // Im blue dabadeebadubah
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_MAX);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
     for (int i = 0; i < size; i++) {
 
         // read out single struct of data
@@ -251,9 +254,9 @@ int read_loop(const struct device *flash_dev) {
         LOG_DBG("Sensor data read...");
         // TODO: send sensors struct over bluetooth
     }
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 0);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 0);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
 }
 
 
@@ -264,12 +267,13 @@ void write_loop(const struct device *flash_dev) {
     uint32_t size = 0;
     flash_read(flash_dev, 0, &size, sizeof(int));
     uint32_t offset = sizeof(int) + ((size) * (sizeof(sensors)));
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 255);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 0);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 0);
+    // Im red like roses
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_MAX);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
     for (int i = 0; i < MAX_SAMPLES; i++) {
         // Sleep for some time before grabbing more data
-        k_msleep(100);
+        k_msleep(SAMPLE_RATE);
         read_gnss(&neotime, &(sensors.lat), &(sensors.ns), &(sensors.lon), &(sensors.ew), &(sensors.alt), &sat);
         read_sensors(&(sensors.temp), &(sensors.hum), &(sensors.press), &(sensors.gas), &(sensors.x_accel), &(sensors.y_accel), &(sensors.z_accel));
         sensors.hour = neotime.hour;
@@ -282,21 +286,22 @@ void write_loop(const struct device *flash_dev) {
     }
     flash_erase(flash_dev, 0, sizeof(size));
     flash_write(flash_dev, 0, &size, sizeof(size));
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 0);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 0);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
     return;
 }
 
 void led_flash(int32_t time) {
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 255);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 255);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 255);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_MAX);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_MAX);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_MAX);
     k_msleep(time);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 0);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 0);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
 }
+
 int main(void) { 
     init_rtc();
     const struct device *flash_dev = TEST_PARTITION_DEVICE;
@@ -321,7 +326,6 @@ int main(void) {
 			LOG_DBG("Error configuring pin for LED intensity\n");
 		}
     }
-
     neo_dev = DEVICE_DT_GET(NEO_SERIAL);
     pressure = DEVICE_DT_GET_ONE(st_lps22hb_press);
     humidity = DEVICE_DT_GET_ONE(st_hts221);
@@ -342,6 +346,7 @@ int main(void) {
             read_loop(flash_dev);
             ble_wakeup = 0; 
         } else {
+            // epilepsy check
             int32_t time_flashing = 200; 
             LOG_DBG("Idling thingy52... zzz...");
             for (int i = 1; i < 3; i++) {
