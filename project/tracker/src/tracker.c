@@ -9,31 +9,45 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/storage/flash_map.h>
-
+#include <zephyr/drivers/counter.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/gpio/gpio_sx1509b.h>
 #include <drivers/gnss/ublox_neo_m9n.h>
+#include <zephyr/pm/pm.h>
 
 
+#define MAX_SAMPLES 10
 #define TEST_PARTITION	storage_partition
-#define TEST_PARTITION_OFFSET	FIXED_PARTITION_OFFSET(TEST_PARTITION)
-#define TEST_PARTITION_DEVICE	FIXED_PARTITION_DEVICE(TEST_PARTITION)
+#define TEST_PARTITION_OFFSET FIXED_PARTITION_OFFSET(TEST_PARTITION)
+#define TEST_PARTITION_DEVICE FIXED_PARTITION_DEVICE(TEST_PARTITION)
 
 #define FLASH_PAGE_SIZE   4096
 
 #define NEO_SERIAL DT_NODELABEL(neom9n)
 
-#if defined(CONFIG_FLASH_HAS_EXPLICIT_ERASE) &&	\
-	defined(CONFIG_FLASH_HAS_NO_EXPLICIT_ERASE)
-#define FLASH_PE_RUNTIME_CHECK(cond) (cond)
-#elif defined(CONFIG_FLASH_HAS_EXPLICIT_ERASE)
-#define FLASH_PE_RUNTIME_CHECK(cond) (true)
-#else
-#define FLASH_PE_RUNTIME_CHECK(cond) (false)
-#endif
 
-struct meta_data {
-    uint32_t header;
-    size_t len_blks; 
+
+#define NUMBER_OF_LEDS 3
+#define GREEN_LED DT_GPIO_PIN(DT_NODELABEL(led0), gpios)
+#define BLUE_LED DT_GPIO_PIN(DT_NODELABEL(led1), gpios)
+#define RED_LED DT_GPIO_PIN(DT_NODELABEL(led2), gpios)
+
+static const gpio_pin_t rgb_pins[] = {
+	RED_LED,
+	GREEN_LED,
+	BLUE_LED,
 };
+const struct device *sx1509b_dev;
+
+#define ALARM_CHANNEL_ID 0
+#define UPDATE 20000// Update window (interrupts)
+
+LOG_MODULE_REGISTER(tracker, LOG_LEVEL_INF);
+
+struct counter_top_cfg ctr_top;
+
+const struct device *const rtc_2 = DEVICE_DT_GET(DT_ALIAS(rtc2));
+
 
 struct sensor_blk {
     uint8_t hour;
@@ -62,6 +76,30 @@ const struct device *pressure;
 const struct device *humidity;
 const struct device *evoc;
 const struct device *accel;
+
+// TODO: set rtc_wakeup to 0 on ble interupt, ble wakeup to 1 on ble interrupt
+// TODO: send data in read_loop over bluetooth. 
+static int rtc_wakeup;
+static int ble_wakeup;
+
+void rtc_interrupt(const struct device *dev, void *user_data) {
+    ARG_UNUSED(dev);
+    ARG_UNUSED(user_data);
+    rtc_wakeup = 1;
+    ble_wakeup = 0;
+}
+
+void init_rtc(void) {
+    ctr_top.ticks = counter_us_to_ticks(rtc_2, UPDATE);
+    ctr_top.user_data = &ctr_top;
+    ctr_top.callback = rtc_interrupt;
+    ctr_top.flags = 0;
+    counter_set_top_value(rtc_2, &ctr_top);
+    counter_start(rtc_2);
+}
+
+
+
 /*
 * Returns 0 if exited correctly
 */
@@ -113,6 +151,7 @@ int init_gnss(void) {
     neo_api->cfg_msg(neo_dev, NMEA_VLW, 0);
     neo_api->cfg_msg(neo_dev, NMEA_VTG, 0);
     neo_api->cfg_msg(neo_dev, NMEA_ZDA, 0);
+    return 0;
 }
 
 void read_gnss(struct time *neotime, 
@@ -127,7 +166,7 @@ void read_gnss(struct time *neotime,
             neo_api->get_satellites(neo_dev, sat);
 }
 
-void read_sensors(double *temp, double *hum, double *press, 
+int read_sensors(double *temp, double *hum, double *press, 
     double *gas, double *x_accel, double *y_accel, double *z_accel) {
     
     struct sensor_value gas_raw;
@@ -159,15 +198,15 @@ void read_sensors(double *temp, double *hum, double *press,
         // humidity channel reading error
         return -EIO;
     }
-    if (sensor_channel_get(pressure, SENSOR_CHAN_PRESS, &temp_raw) < 0) {
+    if (sensor_channel_get(pressure, SENSOR_CHAN_PRESS, &pressure_raw) < 0) {
         // pressure channel reading error
         return -EIO;
     }
-    if (sensor_channel_get(pressure, SENSOR_CHAN_AMBIENT_TEMP, &pressure_raw) < 0) {
+    if (sensor_channel_get(pressure, SENSOR_CHAN_AMBIENT_TEMP, &temp_raw) < 0) {
         // temperature channel reading error
         return -EIO;
     }
-    if (sensor_channel_get(evoc, SENSOR_CHAN_VOC, &gas) < 0) {
+    if (sensor_channel_get(evoc, SENSOR_CHAN_VOC, &gas_raw) < 0) {
         // pressure channel reading error
         return -EIO;
     }
@@ -189,100 +228,130 @@ void read_sensors(double *temp, double *hum, double *press,
 }
 
 
-void write_to_flash(struct device *flash_dev, struct sensor_blk sensors, int size, off_t offset) { 
-    flash_write(flash_dev, 0, &size, sizeof(size));
+void write_to_flash(const struct device *flash_dev, struct sensor_blk sensors, uint32_t size, off_t offset) { 
     flash_write(flash_dev, offset, &sensors, sizeof(sensors));
 }
 
 
-int read_loop(struct device *flash_dev) {
-    // Trigger this by bluetooth callback
-    int size = 0;
-    off_t offset = 0 + sizeof(int);
+int read_loop(const struct device *flash_dev) {
+    // Triggered from bluetooth wakeup
+    uint32_t size = 0;
+    uint32_t offset = 0 + sizeof(int);
     flash_read(flash_dev, 0, &size, sizeof(int));
     struct sensor_blk sensors;
+    // Unpacks data since last bluetooth grab
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 255);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 0);
     for (int i = 0; i < size; i++) {
 
-        // read out structs of data, pack into msgq
+        // read out single struct of data
         flash_read(flash_dev, offset, &sensors, sizeof(sensors));
         offset += sizeof(sensors);
-
-        // pack msgq
+        LOG_DBG("Sensor data read...");
+        // TODO: send sensors struct over bluetooth
     }
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 0);
 }
 
 
-int write_loop(void) {
-
-    const struct device *flash_dev = TEST_PARTITION_DEVICE;
-    struct flash_parameters flash_params;
-    memcpy(&flash_params, flash_get_parameters(flash_dev), sizeof(flash_params));
-
-    if (!device_is_ready(flash_dev)) {
-		printf("Internal storage device not ready\n");
-        return EINVAL;
-	}
-
-    neo_dev = DEVICE_DT_GET(NEO_SERIAL);
-    pressure = DEVICE_DT_GET_ONE(st_lps22hb_press);
-    humidity = DEVICE_DT_GET_ONE(st_hts221);
-    evoc = DEVICE_DT_GET_ONE(ams_ccs811);
-    accel = DEVICE_DT_GET_ONE(st_lis2dh12);
+void write_loop(const struct device *flash_dev) {
     struct time neotime;
     int sat;
     struct sensor_blk sensors;
-    int size = 0;
-    off_t offset = 0 + sizeof(int);
-    int err = 0;
-    err = init_sensors();
-    err = init_gnss();
-    if (err) {
-        return err;
-    }
-
-    while (1) {
-        // wake up;
-        k_msleep(2000);
-
+    uint32_t size = 0;
+    flash_read(flash_dev, 0, &size, sizeof(int));
+    uint32_t offset = sizeof(int) + ((size) * (sizeof(sensors)));
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 255);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 0);
+    for (int i = 0; i < MAX_SAMPLES; i++) {
+        // Sleep for some time before grabbing more data
+        k_msleep(100);
         read_gnss(&neotime, &(sensors.lat), &(sensors.ns), &(sensors.lon), &(sensors.ew), &(sensors.alt), &sat);
         read_sensors(&(sensors.temp), &(sensors.hum), &(sensors.press), &(sensors.gas), &(sensors.x_accel), &(sensors.y_accel), &(sensors.z_accel));
         sensors.hour = neotime.hour;
         sensors.minute = neotime.minute;
         sensors.second = neotime.second;
-        write_to_flash(flash_dev, sensors, size, offset);
-        flash_write(flash_dev, offset, (uint8_t *) &sensors, sizeof(sensors));
-        offset += sizeof(sensors);
         size++;
-        // Wrtie to memory
+        write_to_flash(flash_dev, sensors, size, offset);
+        offset += sizeof(sensors);
+        LOG_DBG("Sensor data written");
     }
-    return err;
+    flash_erase(flash_dev, 0, sizeof(size));
+    flash_write(flash_dev, 0, &size, sizeof(size));
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 0);
+    return;
 }
 
+void led_flash(int32_t time) {
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 255);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 255);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 255);
+    k_msleep(time);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, 0);
+    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, 0);
+}
 int main(void) { 
+    init_rtc();
     const struct device *flash_dev = TEST_PARTITION_DEVICE;
     struct flash_parameters flash_params;
     memcpy(&flash_params, flash_get_parameters(flash_dev), sizeof(flash_params));
-
+    int err = 0;
     if (!device_is_ready(flash_dev)) {
 		printf("Internal storage device not ready\n");
         return EINVAL;
 	}
+
+    sx1509b_dev = DEVICE_DT_GET(DT_NODELABEL(sx1509b));
+    // Setup led
+	if (!device_is_ready(sx1509b_dev)) {
+		printk("sx1509b: device not ready.\n");
+	}
+    for (int i = 0; i < NUMBER_OF_LEDS; i++) {
+		err = sx1509b_led_intensity_pin_configure(sx1509b_dev,
+							  rgb_pins[i]);
+
+		if (err) {
+			LOG_DBG("Error configuring pin for LED intensity\n");
+		}
+    }
 
     neo_dev = DEVICE_DT_GET(NEO_SERIAL);
     pressure = DEVICE_DT_GET_ONE(st_lps22hb_press);
     humidity = DEVICE_DT_GET_ONE(st_hts221);
     evoc = DEVICE_DT_GET_ONE(ams_ccs811);
     accel = DEVICE_DT_GET_ONE(st_lis2dh12);
-    struct time neotime;
-    int sat;
-    struct sensor_blk sensors;
-    int size = 0;
-    off_t offset = 0 + sizeof(int);
-    int err = 0;
     err = init_sensors();
-    err = init_gnss();
+    err |= init_gnss();
     if (err) {
         return err;
     }
-    // IDK IF I NEED TO MAKE A GOTO STATEMENT FOR THIS ON EVERY WAKEUP OR IF IT RUNS NORMALLY.
+    write_loop(flash_dev);
+    while(1) {
+        // Loop occurs on every wakeup from idle or after every occurance
+        if (rtc_wakeup) {
+            write_loop(flash_dev);
+            rtc_wakeup = 0;
+        } else if (ble_wakeup) {
+            read_loop(flash_dev);
+            ble_wakeup = 0; 
+        } else {
+            int32_t time_flashing = 200; 
+            LOG_DBG("Idling thingy52... zzz...");
+            for (int i = 1; i < 3; i++) {
+                led_flash(time_flashing * i);
+            }
+            pm_state_force(0, &(struct pm_state_info){
+                .state = PM_STATE_SUSPEND_TO_IDLE,
+                .substate_id = 0
+            });
+            k_cpu_idle();
+        }
+    }
 }
