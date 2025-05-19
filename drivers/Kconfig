@@ -1,5 +1,9 @@
 menu "Drivers"
 
 rsource "gnss/Kconfig"
+rsource "accelerometer/Kconfig"
+rsource "evoc/Kconfig"
+rsource "humidity/Kconfig"
+rsource "temp/Kconfig"
 
 endmenu
