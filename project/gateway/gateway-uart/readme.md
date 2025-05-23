@@ -3,3 +3,12 @@ Receives batched tracker device data via bluetooth and uploads to the gateway vi
 
 # Connection
 Gateway connection to Azure IoT Hub uses off device transmission via UART protocol (See gateway/gateway-server)
+
+
+west build -b disco_l475_iot1 ~/csse4011/repo-project/project/gateway/gateway-uart --pristine
+
+
+west build -b thingy52/nrf52832  ~/csse4011/repo-project/project/gateway/gateway-uart --pristine
+
+
+west build -b nrf52840dk/nrf52840 ~/csse4011/repo-project/project/gateway/gateway-uart --pristine

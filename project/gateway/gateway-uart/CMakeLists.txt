@@ -4,6 +4,9 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(gateway-uart)
 
-add_subdirectory(../common)
+add_subdirectory(
+  ${CMAKE_CURRENT_SOURCE_DIR}/../common
+  ${CMAKE_CURRENT_BINARY_DIR}/common
+)
 
 add_subdirectory(src)
