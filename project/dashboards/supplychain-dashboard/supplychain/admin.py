@@ -48,7 +48,7 @@ class ProductCompositionInline(admin.TabularInline):
 
 @admin.register(ProductComposition)
 class ProductCompositionAdmin(admin.ModelAdmin):
-    list_display = ('parent', 'component', 'quantity', 'created_timestamp')
+    list_display = ('parent', 'component', 'created_timestamp')
     list_filter = ('parent', 'component')
     search_fields = ('parent__product_key', 'component__product_key')
 
@@ -71,9 +71,6 @@ class ProductOrderRequirementAdmin(admin.ModelAdmin):
         'order__pk',
         'requirement__name',
     )
-
-
-
 
 from supplychain.models import ProductOrderItem
 @admin.register(ProductOrderItem)

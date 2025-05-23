@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref, h } from 'vue'
+import { watch, onMounted, computed, ref, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
 import { useProductEventStore } from '@/stores/productevents'
@@ -15,7 +15,6 @@ import { Badge } from '@/components/ui/badge'
 // Router & Store
 const route = useRoute()
 const router = useRouter()
-const productId = route.params.id as string
 const productStore = useProductStore()
 const eventStore = useProductEventStore()
 
@@ -35,7 +34,7 @@ async function fetchQr() {
   qrError.value = null
   try {
     const res = await http.get<string>(
-      `/api/products/${productId}/qr-code/`,
+      `/api/products/${productId.value}/qr-code/`,
       {
         params: { url: currentFullUrl.value },
         responseType: 'text',
@@ -50,11 +49,23 @@ async function fetchQr() {
   }
 }
 
-// Fetch product and its events
-onMounted(async () => {
-  await productStore.fetchProduct(productId)
-  await eventStore.fetchEventsByProduct(productId)
+// turn the param into a reactive value
+const productId = computed(() => route.params.id as string)
+
+// pull all your “load this page” logic into one function
+async function loadPage(id: string) {
+  await productStore.fetchProduct(id)
+  await eventStore.fetchEventsByProduct(id)
   await fetchQr()
+}
+
+// Fetch product and its events
+onMounted(() => loadPage(productId.value))
+
+watch(productId, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    loadPage(newId)
+  }
 })
 
 function formatDateTime(iso: string) {
@@ -66,26 +77,69 @@ const product = computed(() => productStore.product)
 const loading = computed(() => productStore.loading)
 const error = computed(() => productStore.error)
 
-// Composition (components) data
-interface CompData { component_key: string; quantity: number }
-const compData = computed<CompData[]>(() =>
-  product.value?.components.map(c => ({ component_key: c.component_key, quantity: c.quantity })) || []
-)
-const compColumns: ColumnDef<CompData>[] = [
+// Shape of each row in the merged components table
+interface CompRow {
+  id: number
+  product_key: string
+  batch: string
+  owner_name: string | null
+  created_at: string
+}
+
+// Flatten out the nested component
+const compData = computed<CompRow[]>(() => {
+  const list = product.value?.components ?? []
+  return list.map(c => ({
+    id: c.component.id,
+    product_key: c.component.product_key,
+    batch: c.component.batch,
+    owner_name: c.component.owner_name,
+    created_at: formatDateTime(c.component.created_timestamp),
+  }))
+})
+
+// Columns for the merged components table
+const compColumns: ColumnDef<CompRow>[] = [
   {
-    accessorKey: 'component_key',
-    header: ({ column }) => h(DataTableHeader, { column, title: 'Component Key' })
+    accessorKey: 'product_key',
+    header: ({ column }) => h(DataTableHeader, {
+      column,
+      title: 'Component Key'
+    }),
   },
   {
-    accessorKey: 'quantity',
-    header: ({ column }) => h(DataTableHeader, { column, title: 'Quantity' })
+    accessorKey: 'batch',
+    header: ({ column }) => h(DataTableHeader, {
+      column,
+      title: 'Batch'
+    }),
+  },
+  {
+    accessorKey: 'owner_name',
+    header: ({ column }) => h(DataTableHeader, {
+      column,
+      title: 'Owner'
+    }),
+  },
+  {
+    accessorKey: 'created_at',
+    header: ({ column }) => h(DataTableHeader, {
+      column,
+      title: 'Created At'
+    }),
+  },
+  {
+    id: 'actions',
+    header: () => ' ',
+    cell: ({ row }) => h(Button, {
+      variant: 'ghost',
+      size: 'sm',
+      onClick: () => {
+        router.push({ name: 'product_index', params: { id: String(row.original.id) } })
+      }
+    }, () => 'View')
   }
 ]
-
-const events = computed(() => eventStore.events)
-const eventsLoading = computed(() => eventStore.loading)
-const eventsError = computed(() => eventStore.error)
-
 // Events data
 interface EventData { event_type: string; timestamp: string }
 const eventData = computed<EventData[]>(() => {
@@ -156,7 +210,7 @@ const eventColumns: ColumnDef<EventData>[] = [
               <CardTitle>Component Breakdown</CardTitle>
             </CardHeader>
             <CardContent>
-              <DataTable :columns="compColumns" :data="compData" />
+              <DataTable :columns="compColumns" :data="compData" :loading="loading" />
             </CardContent>
           </Card>
         </TabsContent>

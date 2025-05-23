@@ -512,11 +512,6 @@ class ProductComposition(models.Model):
         help_text="A product used as an ingredient/part."
     )
 
-    quantity = models.PositiveIntegerField(
-        default=1,
-        help_text="How many units of the component are used in one unit of the parent."
-    )
-
     created_timestamp = models.DateTimeField(
         auto_now_add=True,
         help_text="When this composition entry was created."
@@ -529,7 +524,7 @@ class ProductComposition(models.Model):
         ordering = ['parent', 'component']
 
     def __str__(self):
-        return f"{self.quantity} × {self.component.product_key} → {self.parent.product_key}"
+        return f"{self.component.product_key} → {self.parent.product_key}"
 
 
 class CustodyTransfer(models.Model):

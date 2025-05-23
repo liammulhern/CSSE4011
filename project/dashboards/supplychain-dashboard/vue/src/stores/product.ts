@@ -1,9 +1,22 @@
+
 import { defineStore } from 'pinia'
 import http from '@/utils/http'
 
+/**
+ * The shape of a “nested” product as returned inside components[]
+ */
+export interface NestedProduct {
+  id: number
+  product_key: string
+  product_type: number | null
+  batch: string
+  owner: number | null
+  created_timestamp: string
+}
+
+/** Now each component entry has the full NestedProduct plus a quantity */
 export interface ProductComponent {
-  component: number
-  component_key: string
+  component: NestedProduct
   quantity: number
 }
 
