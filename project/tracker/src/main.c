@@ -11,10 +11,12 @@
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/drivers/counter.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/sys/poweroff.h>
 #include <zephyr/drivers/gpio/gpio_sx1509b.h>
-#include <drivers/gnss/ublox_neo_m9n.h>
 #include <zephyr/pm/pm.h>
-
+#include <drivers/gnss/ublox_neo_m9n.h>
+#include <zephyr/drivers/hwinfo.h>
+#include <zephyr/pm/device.h>
 
 #define MAX_SAMPLES 10
 #define TEST_PARTITION	storage_partition
@@ -24,7 +26,6 @@
 #define FLASH_PAGE_SIZE   4096
 
 #define NEO_SERIAL DT_NODELABEL(neom9n)
-
 
 #define LED_MAX 255
 #define LED_OFF 0
@@ -42,13 +43,16 @@ static const gpio_pin_t rgb_pins[] = {
 const struct device *sx1509b_dev;
 
 #define ALARM_CHANNEL_ID 0
-#define UPDATE 20000// Update window (interrupts)
+#define UPDATE 30// Update window (interrupts)
 #define SAMPLE_RATE 1000 // Time between samples grabbed in a row while awake
+
+#define LIS2DH12_NODE DT_NODELABEL(lis2dh12)
+
+static const struct gpio_dt_spec lis2dh12_irq = GPIO_DT_SPEC_GET(LIS2DH12_NODE, irq_gpios);
+
 LOG_MODULE_REGISTER(tracker, LOG_LEVEL_INF);
 
 struct counter_top_cfg ctr_top;
-
-const struct device *const rtc_2 = DEVICE_DT_GET(DT_ALIAS(rtc2));
 
 
 struct sensor_blk {
@@ -59,8 +63,7 @@ struct sensor_blk {
     char ns;
     float lon;
     char ew;
-    float alt; 
-    int sat;
+    float alt;
     double temp;
     double hum;
     double press;
@@ -78,28 +81,6 @@ const struct device *pressure;
 const struct device *humidity;
 const struct device *evoc;
 const struct device *accel;
-
-// TODO: set rtc_wakeup to 0 on ble interupt, ble wakeup to 1 on ble interrupt
-// TODO: send data in read_loop over bluetooth. 
-static int rtc_wakeup;
-static int ble_wakeup;
-
-void rtc_interrupt(const struct device *dev, void *user_data) {
-    ARG_UNUSED(dev);
-    ARG_UNUSED(user_data);
-    rtc_wakeup = 1;
-    ble_wakeup = 0;
-}
-
-void init_rtc(void) {
-    ctr_top.ticks = counter_us_to_ticks(rtc_2, UPDATE);
-    ctr_top.user_data = &ctr_top;
-    ctr_top.callback = rtc_interrupt;
-    ctr_top.flags = 0;
-    counter_set_top_value(rtc_2, &ctr_top);
-    counter_start(rtc_2);
-}
-
 
 
 /*
@@ -171,7 +152,6 @@ void read_gnss(struct time *neotime,
     neo_api->get_altitude(neo_dev, alt);
     neo_api->get_satellites(neo_dev, sat);
 }
-
 int read_sensors(double *temp, double *hum, double *press, 
     double *gas, double *x_accel, double *y_accel, double *z_accel) {
     
@@ -255,7 +235,7 @@ int read_loop(const struct device *flash_dev) {
         // read out single struct of data
         flash_read(flash_dev, offset, &sensors, sizeof(sensors));
         offset += sizeof(sensors);
-        LOG_DBG("Sensor data read...");
+        LOG_DBG("Sensor data read...\n");
         // TODO: send sensors struct over bluetooth
     }
     sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
@@ -264,10 +244,10 @@ int read_loop(const struct device *flash_dev) {
 }
 
 
-void write_loop(const struct device *flash_dev) {
+void write_loop(const struct device *flash_dev, int flag) {
     struct time neotime;
-    int sat;
     struct sensor_blk sensors;
+    int sat;
     uint32_t size = 0;
     flash_read(flash_dev, 0, &size, sizeof(int));
     uint32_t offset = sizeof(int) + ((size) * (sizeof(sensors)));
@@ -281,12 +261,17 @@ void write_loop(const struct device *flash_dev) {
         read_gnss(&neotime, &(sensors.lat), &(sensors.ns), &(sensors.lon), &(sensors.ew), &(sensors.alt), &sat);
         read_sensors(&(sensors.temp), &(sensors.hum), &(sensors.press), &(sensors.gas), &(sensors.x_accel), &(sensors.y_accel), &(sensors.z_accel));
         sensors.hour = neotime.hour;
-        sensors.minute = neotime.minute;
-        sensors.second = neotime.second;
+        sensors.minute = neotime.min;
+        sensors.second = neotime.sec;
         size++;
+        if (flag) {
+            sensors.x_accel = 255;
+            sensors.y_accel = 255;
+            sensors.z_accel = 255;
+        }
         write_to_flash(flash_dev, sensors, size, offset);
         offset += sizeof(sensors);
-        LOG_DBG("Sensor data written");
+        LOG_DBG("Sensor data written\n");
     }
     flash_erase(flash_dev, 0, sizeof(size));
     flash_write(flash_dev, 0, &size, sizeof(size));
@@ -306,12 +291,23 @@ void led_flash(int32_t time) {
     sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
 }
 
+bool is_accel_interrupt_active(void) {
+    int val = gpio_pin_get_dt(&lis_int_gpio);
+    return (val > 0); // or < 0 depending on active level
+}
+
 int main(void) { 
-    init_rtc();
     const struct device *flash_dev = TEST_PARTITION_DEVICE;
     struct flash_parameters flash_params;
     memcpy(&flash_params, flash_get_parameters(flash_dev), sizeof(flash_params));
     int err = 0;
+    const struct device *const cons = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+
+	if (!device_is_ready(cons)) {
+		printf("%s: device not ready.\n", cons->name);
+		return 0;
+	}
+
     if (!device_is_ready(flash_dev)) {
 		printf("Internal storage device not ready\n");
         return EINVAL;
@@ -340,27 +336,64 @@ int main(void) {
     if (err) {
         return err;
     }
-    write_loop(flash_dev);
+    int flag;
     while(1) {
         // Loop occurs on every wakeup from idle or after every occurance
-        if (rtc_wakeup) {
-            write_loop(flash_dev);
-            rtc_wakeup = 0;
-        } else if (ble_wakeup) {
-            read_loop(flash_dev);
-            ble_wakeup = 0; 
+        if (is_accel_interrupt_active()) {
+            // Woke from accel motion
+            LOG_WRN("Unstable Motion detected!\n");
+            flag = 1;
+            write_loop(flash_dev, flag);
         } else {
-            // epilepsy check
-            int32_t time_flashing = 200; 
-            LOG_DBG("Idling thingy52... zzz...");
-            for (int i = 1; i < 3; i++) {
-                led_flash(time_flashing * i);
-            }
-            pm_state_force(0, &(struct pm_state_info){
-                .state = PM_STATE_SUSPEND_TO_IDLE,
-                .substate_id = 0
-            });
-            k_cpu_idle();
+            // Woke from RTC
+            flag = 0;
+            write_loop(flash_dev, flag);
         }
+        // GPS CHECK
+
+
+
+        // epilepsy check
+        int32_t time_flashing = 500; 
+        for (int j = 1; j < 4; j++) {
+            led_flash(time_flashing / j);
+        }
+        err = z_nrf_grtc_wakeup_prepare(UPDATE * USEC_PER_SEC);
+        if (err < 0) {
+            LOG_WRN("Unable to setup timer wakeup interrupt.\n");
+            continue;
+        }
+        err = gpio_pin_configure_dt(&lis2dh12_irq, GPIO_INPUT);
+        if (err < 0) {
+            printf("Could not suspend console (%d)\n", err);
+            continue;
+        }
+        err = gpio_pin_interrupt_configure_dt(&lis2dh12_irq, GPIO_INT_LEVEL_ACTIVE);
+        if (err < 0) {
+            printf("Could not suspend console (%d)\n", err);
+            continue;
+        }
+        LOG_DBG("turning off thingy52... zzz...\n");
+        err = pm_device_action_run(cons, PM_DEVICE_ACTION_SUSPEND);
+        if (err < 0) {
+            printf("Could not suspend console (%d)\n", err);
+            continue;
+        }
+        struct sensor_value threshold = { .val1 = 1, .val2 = 0 };  // ~1g
+        sensor_attr_set(accel, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_UPPER_THRESH, &threshold);
+        struct sensor_trigger trig = {
+            .type = SENSOR_TRIG_DELTA,
+            .chan = SENSOR_CHAN_ACCEL_XYZ,
+        };
+
+        err = sensor_trigger_set(accel, &trig, NULL);
+        if (err < 0) {
+            LOG_ERR("Failed to set LIS2DH trigger: %d", err);
+            continue;
+        }
+        k_msleep(2000);
+        hwinfo_clear_reset_cause();
+        LOG_DBG("turning off thingy52... zzz...\n");
+        sys_poweroff();
     }
 }

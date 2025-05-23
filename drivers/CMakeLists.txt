@@ -1,5 +1,1 @@
 add_subdirectory_ifdef(CONFIG_GNSS gnss)
-add_subdirectory_ifdef(CONFIG_LPS22HB temp)
-add_subdirectory_ifdef(CONFIG_HTS221 humidity)
-add_subdirectory_ifdef(CONFIG_CCS811 evoc)
-add_subdirectory_ifdef(CONFIG_LIS2DH12 accelerometer)

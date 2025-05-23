@@ -1,9 +1,10 @@
-/{
-  aliases {
+/ {
+    aliases {
         rtc2 = &rtc2;
         temp = &hts221;
         pressure = &lps22hb_press;
         gas = &ccs811;
+        accel0 = &lis2dh12;
     };
 };
 
