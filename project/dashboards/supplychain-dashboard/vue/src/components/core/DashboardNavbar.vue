@@ -21,28 +21,35 @@ import {
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/stores/app';
+import { useAuthStore } from '@/stores/auth';
+import { computed } from 'vue'
+import { logout, isAuthenticated } from '@/services/auth'
 
 const store = useAppStore();
+const auth = useAuthStore();
 
 const toggleMode = () => {
   store.toggleTheme();
 };
+
+const user = computed(() => auth.user);
+const username = computed(() => auth.user?.username ?? 'Guest');
+const useremail = computed(() => auth.user?.email ?? '');
+
 </script>
 
 <template>
-  <nav class="flex items-center justify-between h-[64px] border-b-[1px] px-4 fixed z-40 top-0 bg-background/80 backdrop-blur-lg border-b border-border" :style="{ width: store.navWidth }">
+  <nav
+    class="flex items-center justify-between h-[64px] border-b-[1px] px-4 fixed z-40 top-0 bg-background/80 backdrop-blur-lg border-b border-border"
+    :style="{ width: store.navWidth }">
     <div class="w-24 hidden lg:block">
       <Breadcrumb />
     </div>
     <div class="w-2/5 hidden lg:block">
       <GlobalSearchPopover />
     </div>
-    <Button
-      variant="outline"
-      class="p-[6px] w-8 h-8 transition-all duration-200 block lg:hidden"
-      :class="store.sidebarExpanded ? 'bg-transparent' : 'dark:bg-white'"
-      @click="store.toggleSidebar()"
-    >
+    <Button variant="outline" class="p-[6px] w-8 h-8 transition-all duration-200 block lg:hidden"
+      :class="store.sidebarExpanded ? 'bg-transparent' : 'dark:bg-white'" @click="store.toggleSidebar()">
       <Menu class="transition-all duration-500 text-black" />
     </Button>
     <div class="flex items-center">
@@ -58,26 +65,25 @@ const toggleMode = () => {
         <DropdownMenuTrigger as-child>
           <Button variant="outline" class="border-0 flex items-center max-w-[200px] w-full justify-start">
             <Avatar class="h-8 w-8">
-              <AvatarImage src="https://github.com/radix-vue.png"></AvatarImage>
+              <User class="h-4 w-4" />
             </Avatar>
             <span class="ml-2 hidden md:flex justify-start flex-col items-start">
-              <p class="mb-0">John Doe</p>
-              <small class="text-xs text-slate-400 font-light">john_doe@email.com</small>
+              <p class="mb-0">{{ username }}</p>
+              <small class="text-xs text-slate-400 font-light">{{ useremail }}</small>
             </span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent class="w-56 relative mr-4">
-          <DropdownMenuLabel>John Doe</DropdownMenuLabel>
+        <DropdownMenuContent class="w-56 relative mr-4" v-if="isAuthenticated()">
+          <DropdownMenuLabel>{{ username }}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem>
             <User class="mr-2 h-4 w-4" />
             <span>Profile</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
+          <DropdownMenuItem @click="logout()">
             <LogOut class="mr-2 h-4 w-4" />
             <span>Log out</span>
-            <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

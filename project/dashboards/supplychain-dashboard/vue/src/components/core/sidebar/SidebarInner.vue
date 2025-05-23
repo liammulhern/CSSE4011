@@ -28,7 +28,8 @@ const menus = computed(() => Object.entries(APP_MENU).map(([key, value]) => ({
 ));
 
 const handleNavigate = (path: string) => {
-  router.push(path);
+  router.push(`/dashboard/${path}`);
+
   if (window.innerWidth < 1025) {
     store.toggleSidebar();
   }
@@ -50,8 +51,8 @@ const toggleSidebar = () => {
           <div class="px-4 h-[64px] flex fixed z-10 items-center justify-between border-b-[1px]"
             :style="{ width: `${store.sidebarExpanded ? 280 : 64}px` }">
             <transition name="fade">
-              <h2 v-show="store.sidebarExpanded" class="text-2xl font-semibold flex items-center">
-                <span class="text-foreground"><span class="mr-2 flex items-center">
+              <h2 v-show="store.sidebarExpanded" class="text-2xl text-primary font-semibold flex items-center">
+                <span class="text-primary"><span class="mr-2 flex items-center">
                     <Icon name="Package" />
                   </span></span>
                 PathLedger

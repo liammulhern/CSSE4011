@@ -17,4 +17,5 @@ dependencies = [
     "iota-sdk>=1.1.4",
     "psycopg2-binary>=2.9",
     "python-dotenv>=0.21",
+    "qrcode>=8.2",
 ]

@@ -5,6 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangePicker } from '@/components/ui/daterange-picker';
 import RecentSales from '@/components/examples/RecentSales.vue';
 import Overview from '@/components/examples/Overview.vue';
+import ProductEventMap from '@/components/maps/ProductEventMap.vue';
+import { onMounted } from 'vue';
+import { useAuthStore } from '@/stores/auth';
+
+onMounted(() => {
+  const auth = useAuthStore();
+  if (!auth.user) auth.fetchUser();
+});
 </script>
 
 <template>
@@ -12,7 +20,6 @@ import Overview from '@/components/examples/Overview.vue';
     <page-header title="Dashboard">
       <div class="flex items-center space-x-2">
         <DateRangePicker />
-        <Button>Download</Button>
       </div>
     </page-header>
 
@@ -116,10 +123,10 @@ import Overview from '@/components/examples/Overview.vue';
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
           <Card class="col-span-4">
             <CardHeader>
-              <CardTitle>Overview</CardTitle>
+              <CardTitle>Product Events</CardTitle>
             </CardHeader>
             <CardContent class="pl-2">
-              <Overview />
+              <ProductEventMap />
             </CardContent>
           </Card>
           <Card class="col-span-3">

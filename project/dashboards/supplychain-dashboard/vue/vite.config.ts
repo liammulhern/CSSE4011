@@ -6,7 +6,8 @@ import autoprefixer from 'autoprefixer'
 
 export default defineConfig(({ mode }) => {
   const rootDir = path.resolve(__dirname, 'src');
-  const env = loadEnv(mode, process.cwd(), '');
+  const envDir = path.resolve(__dirname, '..');
+  const env = loadEnv(mode, envDir, '');
   const production = env.NODE_ENV === 'production';
 
   return {
@@ -34,5 +35,15 @@ export default defineConfig(({ mode }) => {
       sourcemap: production,
       outDir: path.resolve(rootDir, '..', 'dist'),
     },
+    preview: {
+      port: 5173,
+      strictPort: true,
+     },
+     server: {
+      port: 5173,
+      strictPort: true,
+      host: true,
+      origin: "http://0.0.0.0:5173",
+     },
   }
 });

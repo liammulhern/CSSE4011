@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory, type RouteMeta } from 'vue-router'
+import { isAuthenticated } from '@/services/auth';
+import { useAuthStore } from '@/stores/auth';
 import DashboardLayoutVue from '@/layouts/dashboard.vue';
 
 interface IRouteMeta {
@@ -10,7 +12,12 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/dashboard/home',
+      name: 'landing',
+      component: () => import('@/views/Landing.vue'),
+      meta: {
+        title: 'Path Ledger',
+        requiresAuth: false
+      } as RouteMeta & IRouteMeta,
     },
     {
       path: '/login',
@@ -18,12 +25,14 @@ const router = createRouter({
       component: () => import('@/views/Login.vue'),
       meta: {
         title: 'Login',
+        requiresAuth: false
       } as RouteMeta & IRouteMeta,
     },
     {
       path: '/dashboard',
       component: DashboardLayoutVue,
       redirect: '/dashboard/home',
+      name: 'dashboard',
       meta: {
         title: 'Dashboard',
       },
@@ -42,7 +51,36 @@ const router = createRouter({
           component: () => import('@/views/dashboard/pages/product_orders/Index.vue'),
           meta: {
             title: 'Tasks',
-          } as RouteMeta & IRouteMeta
+          } as RouteMeta & IRouteMeta,
+          children: [
+            {
+              path: ':id',
+              name: 'product_order_id',
+              component: () => import('@/views/dashboard/pages/product_orders/order/Index.vue'),
+              meta: {
+                title: 'Product Info',
+                hasQRAuth: true
+              }
+            }
+          ]
+        },
+        {
+          path: 'product/:id',
+          component: () => import('@/views/dashboard/pages/product/Index.vue'),
+          name: 'product_index',
+          meta: {
+            title: 'Product',
+            hasQRAuth: true
+          },
+        },
+        {
+          path: 'tracker/:id',
+          component: () => import('@/views/dashboard/pages/tracker/Index.vue'),
+          name: 'tracker_index',
+          meta: {
+            title: 'Tracker',
+            hasQRAuth: true
+          },
         },
         {
           path: 'user',
@@ -73,8 +111,34 @@ const router = createRouter({
   ]
 });
 
-router.beforeEach((loc) => {
-  document.title = loc.meta.title as string;
+router.beforeEach(async (to, from, next) => {
+  document.title = to.meta.title as string;
+
+  const auth = useAuthStore();
+  const hasPublicAuth = to.matched.some(r => r.meta.requiresAuth === false)
+  const hasQRAuth = to.matched.some(r => r.meta.hasQRAuth === true)
+
+  // If we have a token but no user, try to fetch
+  if (isAuthenticated() && !auth.user) {
+    try {
+      await auth.fetchUser();
+    } catch {
+      // ignore—fetchUser will clear user on failure
+    }
+  }
+
+  if (isAuthenticated() || hasPublicAuth)
+    return next();
+
+  // already logged in and going to Login send them home
+  if (to.name === 'login' && isAuthenticated())
+    return next({ name: 'home' });
+
+  // TODO: check if the token is valid
+  if (to.query.token && hasQRAuth)
+    return next();
+
+  return next({ name: 'login', query: { redirect: to.fullPath } });
 })
 
 export default router

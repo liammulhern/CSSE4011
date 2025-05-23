@@ -1,0 +1,106 @@
+from rest_framework.decorators import api_view
+from rest_framework import viewsets, permissions
+from rest_framework.decorators import action, permission_classes
+from rest_framework.response import Response
+
+from supplychain.models import TrackerEvent, ProductEvent
+from supplychain.serialisers.serialiser_events import (
+    TrackerEventSerializer, 
+    ProductEventSerializer,
+    VerifyHashInputSerializer,
+    VerifyHashResultSerializer
+)
+
+class TrackerEventViewSet(viewsets.ModelViewSet):
+    queryset = TrackerEvent.objects.all()
+    serializer_class = TrackerEventSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=True, methods=['post'], url_path='verify')
+    def verify(self, request, pk=None):
+        """
+        POST /tracker-events/{pk}/verify/
+        Calls TrackerEvent.verify_block_hash() and returns pass/fail.
+        """
+        tracker = self.get_object()
+
+        try:
+            ok = tracker.verify_block_hash()
+            return Response({'verified': ok})
+        except Exception as exc:
+            return Response(
+                {'verified': False, 'error': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class ProductEventViewSet(viewsets.ModelViewSet):
+    queryset = ProductEvent.objects.select_related('product', 'trackerevent', 'recorded_by')
+    serializer_class = ProductEventSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(recorded_by=self.request.user)
+
+    @action(detail=True, methods=['post'], url_path='verify')
+    def verify(self, request, pk=None):
+        """
+        POST /product-events/{pk}/verify/
+        Calls ProductEvent.verify_block_hash() and returns pass/fail.
+        """
+        product_event = self.get_object()
+        try:
+            ok = product_event.verify_block_hash()
+            return Response({'verified': ok})
+        except Exception as exc:
+            return Response(
+                {'verified': False, 'error': str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def verify_event_hashes(request):
+    """
+    POST /events/verify-block-hashes/
+    {
+      "message_ids": ["uuid1", "uuid2", ...]
+    }
+    returns a list of {message_id, event_type, verified, [error]}.
+    """
+    inp = VerifyHashInputSerializer(data=request.data)
+    inp.is_valid(raise_exception=True)
+
+    results = []
+
+    for mid in inp.validated_data['message_ids']:
+        # try as TrackerEvent, then as ProductEvent
+        for model, etype in ((TrackerEvent, 'tracker'), (ProductEvent, 'product')):
+            try:
+                ev = model.objects.get(message_id=mid)
+            except model.DoesNotExist:
+                continue
+
+            try:
+                ok = ev.verify_block_hash()
+                results.append({'message_id': mid, 'event_type': etype, 'verified': ok})
+            except Exception as e:
+                results.append({
+                    'message_id': mid,
+                    'event_type': etype,
+                    'verified': False,
+                    'error': str(e)
+                })
+            break
+        else:
+            # neither model found
+            results.append({
+                'message_id': mid,
+                'event_type': None,
+                'verified': False,
+                'error': 'Event not found'
+            })
+
+    # validate output structure
+    out = VerifyHashResultSerializer(results, many=True)
+
+    return Response(out.data)

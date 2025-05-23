@@ -273,6 +273,107 @@ class GatewayEventRaw(models.Model):
         return f"{self.message_type} @ {self.timestamp.isoformat()} for {self.gateway_id}"
 
 
+class TrackerEvent(models.Model):
+    """
+    Records an event for a tracker anchored on-chain/off-chain.
+    """
+    message_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text="Unique event identifier."
+    )
+
+    tracker = models.ForeignKey(
+        Tracker,
+        on_delete=models.SET_NULL,
+        related_name='trackers',
+        help_text="Tracker to which this event applies.",
+        null=True,
+        blank=True,
+    )
+
+    event_type = models.CharField(
+        max_length=50,
+        help_text="Type of event (e.g. 'manufactured', 'temperature_reading')."
+    )
+
+    payload = models.JSONField(
+        help_text=(
+            'JSON parameters for this payload. '
+            'E.g. {"deviceId": 1.0,"nominal": 4.0,"max": 8.0} '
+        )
+    )
+
+    timestamp = models.DateTimeField(
+        help_text="When the event occurred."
+    )
+
+    data_hash = models.CharField(
+        max_length=64,
+        help_text="SHA-256 hash of the raw payload."
+    )
+
+    block_id = models.CharField(
+        max_length=64,
+        help_text="IOTA block id of the onchain hash."
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this record was created in the dashboard database."
+    )
+
+    class Meta:
+        ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['event_type', 'timestamp']),
+        ]
+        verbose_name = "Tracker Event"
+        verbose_name_plural = "Tracker Events"
+
+    def __str__(self):
+        return f"{self.event_type} @ {self.timestamp.isoformat()} for {self.product}"
+
+    def compute_hash(self) -> HexStr:
+        """
+            SHA-256 over payload and message with sorted keys.
+
+            Returns:
+                HexString for hashed ProductEvent
+
+                e.g. "0x12398a12bc14e09"
+        """
+        serialized_key: str = json.dumps(
+            {
+                "message_id": self.message_id, 
+                "payload": self.payload
+            },
+            sort_keys=True
+        )
+
+        serialized_key_enc = hashlib.sha256(serialized_key.encode("utf-8")).hexdigest()
+
+        return HexStr(serialized_key_enc)
+
+    def verify_block_hash(self) -> bool:
+        """
+            Verify that an IOTA block has the same hash as the 
+            database model.
+
+            Args:
+                block: IOTA blockchain 
+
+            Return:
+                True if the on-chain hash matches the off-chain model
+        """
+        chain_message_id, chain_hash = iota_client.iota_get_block_data(self.message_id)
+
+        model_hash: HexStr  = self.compute_hash()
+
+        return chain_message_id == self.message_id and model_hash == chain_hash
+
+
 class ProductEvent(models.Model):
     """
     Records an event in a product's lifecycle, anchored on-chain/off-chain.
@@ -334,99 +435,6 @@ class ProductEvent(models.Model):
         on_delete=models.SET_NULL,
         related_name='recorded_productevents',
         help_text="User who recorded this event."
-    )
-
-    created_timestamp = models.DateTimeField(
-        auto_now_add=True,
-        help_text="When this record was created in the dashboard database."
-    )
-
-    class Meta:
-        ordering = ['timestamp']
-        indexes = [
-            models.Index(fields=['product', 'timestamp']),
-            models.Index(fields=['data_hash']),
-        ]
-        verbose_name = "Product Event"
-        verbose_name_plural = "Product Events"
-
-    def __str__(self):
-        return f"{self.event_type} @ {self.timestamp.isoformat()} for {self.product}"
-
-    def compute_hash(self) -> HexStr:
-        """
-            SHA-256 over payload and message with sorted keys.
-
-            Returns:
-                HexString for hashed ProductEvent
-
-                e.g. "0x12398a12bc14e09"
-        """
-        serialized_key: str = json.dumps(
-            {
-                "message_id": self.message_id, 
-                "payload": self.payload
-            },
-            sort_keys=True
-        )
-
-        serialized_key_enc = hashlib.sha256(serialized_key.encode("utf-8")).hexdigest()
-
-        return HexStr(serialized_key_enc)
-
-    def verify_block_hash(self) -> bool:
-        """
-            Verify that an IOTA block has the same hash as the 
-            database model.
-
-            Args:
-                block: IOTA blockchain 
-
-            Return:
-                True if the on-chain hash matches the off-chain model
-        """
-        chain_message_id, chain_hash = iota_client.iota_get_block_data(self.message_id)
-
-        model_hash: HexStr  = self.compute_hash()
-
-        return chain_message_id == self.message_id and model_hash == chain_hash
-
-
-class TrackerEvent(models.Model):
-    """
-    Records an event for a tracker anchored on-chain/off-chain.
-    """
-    message_id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-        help_text="Unique event identifier."
-    )
-
-    event_type = models.CharField(
-        max_length=50,
-        help_text="Type of event (e.g. 'manufactured', 'temperature_reading')."
-    )
-
-    payload = models.JSONField(
-        help_text=(
-            'JSON parameters for this payload. '
-            'E.g. {"deviceId": 1.0,"nominal": 4.0,"max": 8.0} '
-        )
-    )
-
-    timestamp = models.DateTimeField(
-        help_text="When the event occurred."
-    )
-
-    data_hash = models.CharField(
-        max_length=64,
-        help_text="SHA-256 hash of the raw payload."
-    )
-
-    block_id = models.CharField(
-        max_length=64,
-        help_text="IOTA block id of the onchain hash."
     )
 
     created_timestamp = models.DateTimeField(
