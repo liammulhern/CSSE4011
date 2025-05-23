@@ -40,7 +40,7 @@ const router = createRouter({
         {
           path: 'home',
           name: 'home',
-          component: () => import('@/views/dashboard/pages/Home.vue'),
+          component: () => import('@/views/dashboard/pages/home/Home.vue'),
           meta: {
             title: 'Home',
           } as RouteMeta & IRouteMeta
@@ -50,19 +50,17 @@ const router = createRouter({
           name: 'product_orders_index',
           component: () => import('@/views/dashboard/pages/product_orders/Index.vue'),
           meta: {
-            title: 'Tasks',
+            title: 'Orders',
           } as RouteMeta & IRouteMeta,
-          children: [
-            {
-              path: ':id',
-              name: 'product_order_id',
-              component: () => import('@/views/dashboard/pages/product_orders/order/Index.vue'),
-              meta: {
-                title: 'Product Info',
-                hasQRAuth: true
-              }
-            }
-          ]
+        },
+        {
+          path: 'product_orders/:id',
+          name: 'product_order_id',
+          component: () => import('@/views/dashboard/pages/product_orders/order/Index.vue'),
+          meta: {
+            title: 'Order',
+            hasQRAuth: true
+          }
         },
         {
           path: 'product/:id',

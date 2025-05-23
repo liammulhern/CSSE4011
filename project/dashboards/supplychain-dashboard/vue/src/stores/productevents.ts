@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import http from '@/utils/http'
 
-/** Interface matching your DRF ProductEventSerializer */
+/** Interface matching DRF ProductEventSerializer */
 export interface ProductEvent {
   message_id: string
   product: number
@@ -38,27 +38,44 @@ export const useProductEventStore = defineStore('productEvent', {
       this.error = null
 
       try {
-        const { data } = await http.get<ProductEvent[]>('/api/product-events/')
+        const { data } = await http.get<ProductEvent[]>('/api/productevents/')
         this.events = data
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : String(err)
+      } catch (err: any) {
+        this.error = err.message || String(err)
       } finally {
         this.loading = false
       }
     },
 
-    /** Load a single product event by its message_id */
-    async fetchEvent(messageId: string) {
+    /** Load a single product event by its event_id*/
+    async fetchEvent(eventId: string) {
       this.loading = true
       this.error = null
 
       try {
         const { data } = await http.get<ProductEvent>(
-          `/api/product-events/${messageId}/`
+          `/api/productevents/${eventId}/`
         )
         this.event = data
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : String(err)
+      } catch (err: any) {
+        this.error = err.message || String(err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /** Load product events for a specific product */
+    async fetchEventsByProduct(productId: string | number) {
+      this.loading = true
+      this.error = null
+
+      try {
+        const resp = await http.get<{ results: ProductEvent[] }>(
+          `/api/productevents/?product=${productId}&ordering=-timestamp&page_size=1000`
+        )
+        this.events = resp.data.results
+      } catch (err: any) {
+        this.error = err.message || String(err)
       } finally {
         this.loading = false
       }
@@ -77,3 +94,4 @@ export const useProductEventStore = defineStore('productEvent', {
     },
   },
 })
+

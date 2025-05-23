@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils import timezone
 
 from supplychain.models import ProductEvent
 @admin.register(ProductEvent)
@@ -72,6 +73,8 @@ class ProductOrderRequirementAdmin(admin.ModelAdmin):
     )
 
 
+
+
 from supplychain.models import ProductOrderItem
 @admin.register(ProductOrderItem)
 class ProductOrderItemAdmin(admin.ModelAdmin):
@@ -100,6 +103,25 @@ class ProductOrderItemAdmin(admin.ModelAdmin):
         'product__product_key',
     )
 
+from supplychain.models import ProductOrderStatus
+@admin.register(ProductOrderStatus)
+class ProductOrderStatusAdmin(admin.ModelAdmin):
+    list_display = ('order', 'status', 'timestamp', 'created_by')
+    list_filter = ('status', 'timestamp')
+    search_fields = ('order__id', 'status')
+    ordering = ('-timestamp',)
+    autocomplete_fields = ('order', 'created_by')
+    readonly_fields = ('created_by',)
+
+    def save_model(self, request, obj, form, change):
+        # On creation, set created_by to the current admin user
+        if not change or obj.created_by is None:
+            obj.created_by = request.user
+        # Ensure timestamp is set if missing
+        if not obj.timestamp:
+            obj.timestamp = timezone.now()
+        super().save_model(request, obj, form, change)
+
 
 class ProductOrderItemInline(admin.TabularInline):
     """
@@ -118,24 +140,36 @@ class ProductOrderRequirementInline(admin.TabularInline):
     extra = 1
     raw_id_fields = ('requirement',)
 
+class ProductOrderStatusInline(admin.TabularInline):
+    model = ProductOrderStatus
+    extra = 0
+    fields = ('status', 'timestamp', 'created_by')
+    readonly_fields = ('created_by',)
+    ordering = ('-timestamp',)
+    show_change_link = True
+
 
 from supplychain.models import ProductOrder
 @admin.register(ProductOrder)
 class ProductOrderAdmin(admin.ModelAdmin):
-    """
-    Admin view for ProductOrder.
-    """
-    list_display = ('id', 'supplier', 'receiver', 'order_timestamp', 'delivery_location')
-    list_filter  = ('supplier', 'receiver', 'order_timestamp')
-    search_fields = (
-        'supplier__name',
-        'receiver__name',
-        'delivery_location',
-    )
+    list_display = ('id', 'supplier', 'receiver', 'order_timestamp', 'current_status')
+    list_filter = ('supplier', 'receiver', 'status_history__status')
+    search_fields = ('id', 'supplier__name', 'receiver__name')
     inlines = [
         ProductOrderItemInline,
         ProductOrderRequirementInline,
+        ProductOrderStatusInline,
     ]
+    readonly_fields = ('current_status',)
+    fieldsets = (
+        (None, {
+            'fields': ('supplier', 'receiver', 'order_timestamp', 'delivery_location', 'created_by')
+        }),
+        ('Status', {
+            'fields': ('current_status',),
+            'description': 'Current status is computed from the latest status history entry.'
+        }),
+    )
 
 
 from supplychain.models import SupplyChainRequirement

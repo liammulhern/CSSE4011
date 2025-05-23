@@ -26,6 +26,7 @@
     "axios": "^1.9.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
+    "date-fns": "^4.1.0",
     "feather-icons": "^4.29.1",
     "leaflet": "^1.9.4",
     "lucide-vue-next": "^0.323.0",

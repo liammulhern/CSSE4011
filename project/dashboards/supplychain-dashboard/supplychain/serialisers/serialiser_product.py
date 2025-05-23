@@ -28,17 +28,24 @@ class ProductSerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False,
     )
+
     owner = serializers.PrimaryKeyRelatedField(
         queryset=Company.objects.all(),
         allow_null=True,
         required=False,
     )
+
+    owner_name = serializers.CharField(
+        source='owner.name',
+        read_only=True,
+    )
+
     recorded_by = serializers.PrimaryKeyRelatedField(
         read_only=True,
         default=serializers.CurrentUserDefault(),
     )
     components = ProductCompositionSerializer(
-        source='productcomposition_set',
+        source='used_in',
         many=True,
         read_only=True,
     )
@@ -51,6 +58,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'product_type',
             'batch',
             'owner',
+            'owner_name',
             'created_timestamp',
             'components',
             'recorded_by',

@@ -69,21 +69,23 @@ class ProductOrderSerializer(serializers.ModelSerializer):
     receiver = serializers.PrimaryKeyRelatedField(
         queryset=Company.objects.all()
     )
+    supplier_name = serializers.CharField(source='supplier.name', read_only=True)
+    receiver_name = serializers.CharField(source='receiver.name', read_only=True)
 
     created_by = serializers.PrimaryKeyRelatedField(
         read_only=True,
         default=serializers.CurrentUserDefault(),
     )
 
-    items = ProductOrderItemSerializer(source='items', many=True, read_only=True)
+    items = ProductOrderItemSerializer(many=True, read_only=True)
     order_requirements = ProductOrderRequirementSerializer(
-        source='order_requirements', many=True, read_only=True
+        many=True, read_only=True
     )
     order_trackers = ProductOrderTrackerSerializer(
-        source='order_trackers', many=True, read_only=True
+        many=True, read_only=True
     )
     status_history = ProductOrderStatusSerializer(
-        source='status_history', many=True, read_only=True
+        many=True, read_only=True
     )
 
     current_status = serializers.SerializerMethodField()
@@ -92,8 +94,11 @@ class ProductOrderSerializer(serializers.ModelSerializer):
         model = ProductOrder
         fields = [
             'id',
+            'order_number',
             'supplier',
+            'supplier_name',
             'receiver',
+            'receiver_name',
             'order_timestamp',
             'delivery_location',
             'items',
@@ -107,4 +112,4 @@ class ProductOrderSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_timestamp']
 
     def get_current_status(self, obj):
-        return obj.current_status().value if obj.current_status() else None
+        return obj.current_status() or None

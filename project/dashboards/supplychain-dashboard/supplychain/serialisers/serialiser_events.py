@@ -67,6 +67,7 @@ class EventFilterSerializer(serializers.Serializer):
         help_text="Window end (ISO-8601)."
     )
 
+
 class VerifyHashInputSerializer(serializers.Serializer):
     """
     Input payload for block‐hash verification.

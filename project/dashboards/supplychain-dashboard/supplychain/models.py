@@ -287,7 +287,7 @@ class TrackerEvent(models.Model):
     tracker = models.ForeignKey(
         Tracker,
         on_delete=models.SET_NULL,
-        related_name='trackers',
+        related_name='trackeevent_trackers',
         help_text="Tracker to which this event applies.",
         null=True,
         blank=True,
@@ -594,6 +594,47 @@ class CustodyTransfer(models.Model):
         )
 
 
+class ComplianceEvent(models.Model):
+    """
+    Records a compliance event for a product, such as passing a quality check.
+    """
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='compliance_events',
+        help_text="Product to which this event applies."
+    )
+
+    event_type = models.CharField(
+        max_length=50,
+        help_text="Type of compliance event (e.g. 'quality_check_passed')."
+    )
+
+    payload = models.JSONField(
+        help_text=(
+            'JSON parameters for this payload. '
+            'E.g. {"deviceId": 1.0,"nominal": 4.0,"max": 8.0} '
+        )
+    )
+
+    timestamp = models.DateTimeField(
+        help_text="When the event occurred."
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this record was created in the dashboard database."
+    )
+
+    class Meta:
+        ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['product', 'timestamp']),
+        ]
+        verbose_name = "Compliance Event"
+        verbose_name_plural = "Compliance Events"
+
+
 class SupplyChainRequirement(models.Model):
     """
     Defines a requirement (e.g., temperature, humidity) that products must meet.
@@ -685,6 +726,11 @@ class ProductOrder(models.Model):
     """
     An order of one or more products, placed by one company and received by another.
     """
+    order_number = models.CharField(
+        max_length=100,
+        help_text='Product order number.'
+    )
+
     supplier = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,

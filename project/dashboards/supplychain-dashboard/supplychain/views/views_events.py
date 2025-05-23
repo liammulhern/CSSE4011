@@ -1,5 +1,5 @@
 from rest_framework.decorators import api_view
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, permission_classes
 from rest_framework.response import Response
 
@@ -56,6 +56,24 @@ class ProductEventViewSet(viewsets.ModelViewSet):
                 {'verified': False, 'error': str(exc)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=False, methods=['get'], url_path=r'product/(?P<product_id>[^/.]+)')
+    def by_product(self, request, product_id=None):
+        """
+        GET /api/product-events/by-product/{product_id}/
+        list all ProductEvent instances for the given product.
+        """
+        # Filter events by product foreign key
+        qs = self.get_queryset().filter(product=product_id).order_by('-timestamp')
+
+        # Apply pagination if requested
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])

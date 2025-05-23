@@ -9,6 +9,7 @@ dependencies = [
     "dj-database-url>=2.3.0",
     "django>=4.2",
     "django-cors-headers>=3.14",
+    "django-filter>=25.1",
     "django-guardian<3",
     "django-stubs>=5.2.0",
     "djangorestframework>=3.14,<4",
