@@ -17,20 +17,7 @@ manifest:
     - name: zephyr
       repo-path: zephyr
       revision: main
-      import:
-        name-whitelist:
-          - cmsis
-          - hal_nordic
-          - hal_stm32
-          - hal_silabs
-          - hal_espressif
-          - mbedtls
-          - mcuboot
-          - mcumgr
-          - segger
-          - tinycbor
-          - tinycrypt
-          - littlefs
+      import: true 
     - name: west-driver-init
       remote: liammulhern
       path: modules/west-driver-init
