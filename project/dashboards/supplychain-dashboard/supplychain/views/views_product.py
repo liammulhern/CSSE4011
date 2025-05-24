@@ -1,11 +1,15 @@
 from django.http import HttpResponse, HttpResponseBadRequest
 
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from accounts.permissions import IsAuthenticatedOrValidQR, QRAuthentication
+
 from supplychain.serialisers.serialiser_product import ProductSerializer
-from supplychain.models import Product, ProductOrderItem
+from supplychain.serialisers.serialiser_events import ProductEventSerializer
+from supplychain.models import Product, ProductOrderItem, ProductEvent
 from supplychain.scripts.qr_token import create_model_qr_code
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -14,12 +18,16 @@ class ProductViewSet(viewsets.ModelViewSet):
     """
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [
-        permissions.IsAuthenticated,
-    ]
+    permission_classes = [IsAuthenticatedOrValidQR]
+    authentication_classes = [JWTAuthentication, QRAuthentication]
 
     def perform_create(self, serializer):
         serializer.save(recorded_by=self.request.user)
+
+    def get_serializer_class(self):
+        if self.action == "events":
+            return ProductEventSerializer
+        return ProductSerializer
 
     @action(detail=True, methods=['get'], url_path='qr-code')
     def qr_code(self, request, pk=None):
@@ -30,7 +38,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         """
         product = self.get_object()
 
-        # 1) Grab the `url` query-param
+        # 1. Grab the `url` query-param
         base_url = request.query_params.get('url')
         if not base_url:
             # fallback to DRF detail route
@@ -41,7 +49,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             except Exception:
                 return HttpResponseBadRequest("No `url` provided and could not reverse detail route.")
 
-        # 2) Generate the QR SVG
+        # 2. Generate the QR SVG
         try:
             svg_bytes = create_model_qr_code(base_url, product)
         except Exception as e:
@@ -50,7 +58,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        # 3) Return raw SVG
+        # 3. Return raw SVG
         return HttpResponse(svg_bytes, content_type='image/svg+xml')    
 
     @action(detail=False, methods=['get'], url_path=r'order/(?P<order_pk>[^/.]+)')
@@ -73,5 +81,23 @@ class ProductViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
 
         # 4. Or return full list
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["get"], url_path="events")
+    def events(self, request, pk=None):
+        """
+        GET /products/{pk}/events/
+        List all ProductTrackerEvent instances for this product,
+        in reverse‐chronological order.
+        """
+        product = self.get_object()
+        qs = ProductEvent.objects.filter(product=product).order_by("-timestamp")
+
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

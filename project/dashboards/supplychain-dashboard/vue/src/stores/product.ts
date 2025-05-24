@@ -32,6 +32,20 @@ export interface Product {
   recorded_by: number | null
 }
 
+/** Interface matching DRF ProductEventSerializer */
+export interface ProductEvent {
+  message_id: string
+  product: number
+  trackerevent: string | null
+  event_type: string
+  payload: Record<string, any>
+  timestamp: string
+  data_hash: string
+  data_uri: string
+  recorded_by: number | null
+  created_timestamp: string
+}
+
 interface ProductState {
   // Single-product detail
   product: Product | null
@@ -42,6 +56,14 @@ interface ProductState {
   productsList: Product[]
   listLoading: boolean
   listError: string | null
+
+  // List of product events
+  events: ProductEvent[],
+  eventsLoading: boolean,
+  eventsError: string | null
+
+  // JWT token for pagination
+  jwt: string | null
 }
 
 export const useProductStore = defineStore('product', {
@@ -53,6 +75,12 @@ export const useProductStore = defineStore('product', {
     productsList: [],
     listLoading: false,
     listError: null,
+
+    events: [],
+    eventsLoading: false,
+    eventsError: null,
+
+    jwt: null,
   }),
 
   actions: {
@@ -62,7 +90,11 @@ export const useProductStore = defineStore('product', {
       this.error = null
 
       try {
-        const { data } = await http.get<Product>(`/api/products/${id}/`)
+        const params: Record<string,string> = {}
+        if (this.jwt) params.token = String(this.jwt);
+
+        const { data } = await http.get<Product>(`/api/products/${id}/`, { params })
+
         this.product = data
       } catch (err: any) {
         this.error = err.message || String(err)
@@ -77,14 +109,37 @@ export const useProductStore = defineStore('product', {
       this.listError = null
 
       try {
+        const params: Record<string,string> = {}
+        if (this.jwt) params.token = String(this.jwt);
+
         const { data } = await http.get<Product[]>(
-          `/api/products/order/${orderId}/`
+          `/api/products/order/${orderId}/`, { params }
         )
         this.productsList = data
       } catch (err: any) {
         this.listError = err.message || String(err)
       } finally {
         this.listLoading = false
+      }
+    },
+
+    /** Fetch all product events */
+    async fetchProductEvents(id: string | number) {
+      this.eventsLoading = true
+      this.eventsError = null
+
+      try {
+        const params: Record<string,string> = {}
+        if (this.jwt) params.token = String(this.jwt);
+
+        const { data } = await http.get<ProductEvent[]>(
+          `/api/products/${id}/events/`, { params }
+        )
+        this.events = data
+      } catch (err: any) {
+        this.eventsError = err.message || String(err)
+      } finally {
+        this.eventsLoading = false
       }
     },
 
@@ -99,6 +154,16 @@ export const useProductStore = defineStore('product', {
       this.productsList = []
       this.listError = null
     },
+
+    /** Clear product events state */
+    clearProductEvents() {
+      this.events = []
+      this.eventsError = null
+    },
+
+    setJwt(jwt: string | null) {
+      this.jwt = jwt
+    }
   },
 })
 

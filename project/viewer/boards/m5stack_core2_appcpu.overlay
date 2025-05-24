@@ -1,0 +1,9 @@
+/ {
+    alias {
+        display = &mipi_dbi;
+    };
+
+    chosen {
+        zephyr,console = &uart0;
+    };
+};

@@ -2,7 +2,6 @@
 import { watch, onMounted, computed, ref, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
-import { useProductEventStore } from '@/stores/productevents'
 import http from '@/utils/http'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -16,7 +15,9 @@ import { Badge } from '@/components/ui/badge'
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
-const eventStore = useProductEventStore()
+
+// if we were opened via QR-token URL, it’ll be in here:
+const jwtToken = computed(() => route.query.token as string | undefined)
 
 // state for QR
 const qrSvg = ref<string | null>(null)
@@ -29,14 +30,14 @@ const currentFullUrl = computed(() => {
   return `${window.location.origin}${route.fullPath}`
 })
 
-async function fetchQr() {
+async function fetchQr(id: string) {
   qrLoading.value = true
   qrError.value = null
   try {
     const res = await http.get<string>(
-      `/api/products/${productId.value}/qr-code/`,
+      `/api/products/${id}/qr-code/`,
       {
-        params: { url: currentFullUrl.value },
+        params: { url: currentFullUrl.value, token: jwtToken.value },
         responseType: 'text',
       }
     )
@@ -54,9 +55,16 @@ const productId = computed(() => route.params.id as string)
 
 // pull all your “load this page” logic into one function
 async function loadPage(id: string) {
-  await productStore.fetchProduct(id)
-  await eventStore.fetchEventsByProduct(id)
-  await fetchQr()
+  // if we have a token query-param, hand it off to the store
+  const token = jwtToken.value;
+
+  if (token) {
+    await productStore.setJwt(token);
+  }
+
+  await productStore.fetchProduct(id);
+  await productStore.fetchProductEvents(id);
+  await fetchQr(id);
 }
 
 // Fetch product and its events
@@ -140,6 +148,11 @@ const compColumns: ColumnDef<CompRow>[] = [
     }, () => 'View')
   }
 ]
+
+const eventsLoading = computed(() => productStore.eventsLoading);
+const eventsError = computed(() => productStore.eventsError);
+const events = computed(() => productStore.events);
+
 // Events data
 interface EventData { event_type: string; timestamp: string }
 const eventData = computed<EventData[]>(() => {
