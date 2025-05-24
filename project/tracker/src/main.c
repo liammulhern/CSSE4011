@@ -19,11 +19,12 @@
 #include <zephyr/drivers/hwinfo.h>
 #include <zephyr/pm/device.h>
 #include <inttypes.h>
+#include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/comparator.h>
 #include <zephyr/drivers/timer/nrf_grtc_timer.h>
 
 
-#define MAX_SAMPLES 2
+#define MAX_SAMPLES 1
 #define TEST_PARTITION	storage_partition
 #define TEST_PARTITION_OFFSET FIXED_PARTITION_OFFSET(TEST_PARTITION)
 #define TEST_PARTITION_DEVICE FIXED_PARTITION_DEVICE(TEST_PARTITION)
@@ -35,9 +36,9 @@
 #define LED_MAX 255
 #define LED_OFF 0
 #define NUMBER_OF_LEDS 3
-#define GREEN_LED DT_GPIO_PIN(DT_NODELABEL(led0), gpios)
-#define BLUE_LED DT_GPIO_PIN(DT_NODELABEL(led1), gpios)
-#define RED_LED DT_GPIO_PIN(DT_NODELABEL(led2), gpios)
+#define RED_LED DT_GPIO_PIN(DT_NODELABEL(led0), gpios)
+#define GREEN_LED DT_GPIO_PIN(DT_NODELABEL(led1), gpios)
+#define BLUE_LED DT_GPIO_PIN(DT_NODELABEL(led2), gpios)
 
 static const gpio_pin_t rgb_pins[] = {
 	RED_LED,
@@ -48,13 +49,15 @@ static const gpio_pin_t rgb_pins[] = {
 const struct device *sx1509b_dev;
 
 #define ALARM_CHANNEL_ID 0
-#define UPDATE 30000000// Update window (interrupts)
+#define UPDATE 10000000// Update window (interrupts)
 #define SAMPLE_RATE 500 // Time between samples grabbed in a row while awake
 
 #define LIS2DH12_NODE DT_NODELABEL(lis2dh12)
 
 LOG_MODULE_REGISTER(tracker, LOG_LEVEL_INF);
 
+#define LIS2DH_REG_CTRL2 0x19
+static const struct i2c_dt_spec accelerometer_i2c_spec = I2C_DT_SPEC_GET(DT_ALIAS(accel0));
 
 const struct device *const rtc_2 = DEVICE_DT_GET(DT_ALIAS(rtc2));
 struct counter_top_cfg ctr_top;
@@ -97,7 +100,6 @@ void rtc_interrupt(const struct device *dev, void *user_data) {
     rtc_tick = 1;
     accel_tick = 0;
     ble_tick = 0;
-    LOG_INF("INT TRIGGERED RAH\n");
 }
 
 void init_rtc(void) {
@@ -248,20 +250,20 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
     // Triggered from bluetooth wakeup
     uint8_t size = 0;
     flash_read(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size);
-     uint32_t offset = TEST_PARTITION_OFFSET + FLASH_PAGE_SIZE;
+    uint32_t offset = 2 * FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET;
     struct sensor_blk sensors;
     // Unpacks data since last bluetooth grab
     // Im blue dabadeebadubah
     sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
     sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_MAX);
     sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
-    LOG_INF("Starting read loop.\n");
+    LOG_INF("read size: %d\n", size);
     for (int i = 0; i < size; i++) {
 
         // read out single struct of data
         flash_read(flash_dev, offset, &sensors, sizeof(sensors));
         offset += sizeof(sensors);
-        LOG_DBG("Sensor data read...\n");
+        LOG_INF("read: %f     %f      %f       %f\n", sensors.temp, sensors.hum, sensors.press, sensors.gas);
         // TODO: send sensors struct over bluetooth
     }
     sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
@@ -270,15 +272,15 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
 
 }
 
-
 void write_loop(const struct device *flash_dev, int flag, uint8_t write_block_size) {
     struct time neotime;
     struct sensor_blk sensors;
     int sat;
     int err;
-    uint8_t size = 0;
-    flash_read(flash_dev, TEST_PARTITION_OFFSET, &size, sizeof(int));
-    uint32_t offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors)));
+    uint32_t size = 0;
+    flash_read(flash_dev, TEST_PARTITION_OFFSET, &size, sizeof(uint32_t));
+    LOG_INF("init size: %d\n", size);
+    uint32_t offset =  2 * FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors)));
     // Im red like roses
     sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_MAX);
     sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
@@ -297,30 +299,30 @@ void write_loop(const struct device *flash_dev, int flag, uint8_t write_block_si
         //sensors.hour = neotime.hour;
         //sensors.minute = neotime.min;
         //sensors.second = neotime.sec;
-        memcpy(byte_array, &(sensors), sizeof(sensors));
-        size++;
         if (flag) {
             sensors.x_accel = 255;
             sensors.y_accel = 255;
             sensors.z_accel = 255;
         }
+        LOG_INF("temp: %f\n", sensors.temp);
+        memcpy(&byte_array, &(sensors), sizeof(sensors));
         uint8_t write_cycles = sizeof(sensors) / write_block_size;
+        struct sensor_blk sensor_dum;
+        uint8_t byte_arr2[sizeof(struct sensor_blk)];
+        LOG_INF("og: %f     %f      %f       %f        %f       %f        %f\n", 
+            sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
         LOG_INF("Write cycles: %u", write_cycles);
         for (int j = 0; j < write_cycles; j++) {
-            offset += j * write_block_size;
+            offset = 2 * FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors))) + j * write_block_size;
             flash_write(flash_dev, offset, &byte_array[j * write_block_size], write_block_size);
         }
-        //offset += sizeof(sensors);
-        LOG_DBG("Sensor data written\n");
+        size++;
     }
+
     flash_erase(flash_dev, TEST_PARTITION_OFFSET, FLASH_PAGE_SIZE);
     if (flash_write(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size)) {
-        LOG_WRN("Size not updated");   
+         LOG_WRN("Size not updated");   
     }
-    //uint8_t size_2 = 100;
-    //struct sensor_blk sensor2;
-    //flash_read(flash_dev, TEST_PARTITION_OFFSET + FLASH_PAGE_SIZE, &sensor2, sizeof(sensor2));
-    //LOG_INF("temp: %f\n", sensor2.temp);
     sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
     sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
     sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
@@ -347,7 +349,6 @@ static void accel_handler(const struct device *dev, const struct sensor_trigger 
     ble_tick = 0;
 }
 
-
 int main(void) { 
     const struct device *flash_dev = TEST_PARTITION_DEVICE;
     struct flash_parameters flash_params;
@@ -370,7 +371,7 @@ int main(void) {
     sx1509b_dev = DEVICE_DT_GET(DT_NODELABEL(sx1509b));
     // Setup led
 	if (!device_is_ready(sx1509b_dev)) {
-		printk("sx1509b: device not ready.\n");
+		LOG_WRN("sx1509b: device not ready.\n");
 	}
     for (int i = 0; i < NUMBER_OF_LEDS; i++) {
 		err = sx1509b_led_intensity_pin_configure(sx1509b_dev,
@@ -384,34 +385,19 @@ int main(void) {
     pressure = DEVICE_DT_GET_ONE(st_lps22hb_press);
     humidity = DEVICE_DT_GET_ONE(st_hts221);
     evoc = DEVICE_DT_GET_ONE(ams_ccs811);
-    accel = DEVICE_DT_GET_ONE(st_lis2dh12);
+    accel = DEVICE_DT_GET(DT_ALIAS(accel0));
     err = init_sensors();
     //err |= init_gnss();
     if (err) {
         return err;
     }
     int flag;
-
-    struct sensor_value threshold = { .val1 = 1, .val2 = 0 };
-    sensor_attr_set(accel, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_UPPER_THRESH, &threshold);
-    struct sensor_trigger trig = {
-        .type = SENSOR_TRIG_THRESHOLD,
-        .chan = SENSOR_CHAN_ACCEL_XYZ,
-    };
-
-    err = sensor_trigger_set(accel, &trig, accel_handler);
-
-    if (err) {
-        LOG_WRN("Accel trigger not set!\n");
-    }
-    uint8_t size = 0;
+    uint32_t size = 0;
     flash_erase(flash_dev, TEST_PARTITION_OFFSET, FLASH_PAGE_SIZE * 4);
     flash_write(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size);
-
+    rtc_tick = 1;
+    int k = 0;
     while(1) {  
-        while (!rtc_tick && !accel_tick && !ble_tick) {
-        k_cpu_idle(); // truly idle CPU while waiting
-        }
         // Loop occurs on every wakeup from idle or after every occurance
         if (rtc_tick) {
             // Woke from rtc
@@ -419,21 +405,26 @@ int main(void) {
             flag = 0;
             write_loop(flash_dev, flag, write_block_size);
             rtc_tick = 0;
+            //init_accel_trig(accel, true);
+            read_loop(flash_dev, write_block_size);
         } else if (accel_tick) {
             // Woke from accel
-            LOG_WRN("Unstable Motion detected!\n");
             flag = 1;
             write_loop(flash_dev, flag, write_block_size);
+            //init_accel_trig(accel ,true);
             accel_tick = 0;
         } else if (ble_tick) {
             // TODO: Woke from BLE
         }
         LOG_INF("Napping... zzz...\n");
         // epilepsy check begin shutdown process
-        int32_t time_flashing = 500; 
+        int32_t time_flashing = 1000; 
         for (int j = 1; j < 4; j++) {
             led_flash(time_flashing / j);
         }
-        k_cpu_idle();
+        
+        while (!rtc_tick && !accel_tick && !ble_tick) {
+            k_cpu_idle(); // truly idle CPU while waiting
+        }
     }
 }
