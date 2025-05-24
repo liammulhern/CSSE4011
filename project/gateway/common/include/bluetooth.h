@@ -15,6 +15,10 @@
 #define BASE_CONTROL_STACK_SIZE 2048
 #define BASE_CONTROL_PRIORITY 5
 
+#define BASE_PROCESS_STACK_SIZE 2048
+#define BASE_PROCESS_PRIORITY 5
+
+extern void process_data_thread(void);
 extern void base_thread(void);
 
 #endif // BASE_SERVICE_H

@@ -8,6 +8,7 @@
 #include <zephyr/bluetooth/uuid.h>
 
 #include <bluetooth.h>
+#include <string.h>  // required for memcpy
 
 // UUIDs for tracker service and characteristic
 static struct bt_uuid_128 tracker_service_uuid = BT_UUID_INIT_128(
@@ -29,15 +30,19 @@ static struct bt_uuid_16 conn_characteristic_uuid = BT_UUID_INIT_16(0x2902);
 #define MAX_CONN 4  // Maximum peripherals to connect to
 
 static struct bt_conn *conns[MAX_CONN];
-
-
 static struct bt_gatt_subscribe_params subs[MAX_CONN];
 static uint16_t char_handles[MAX_CONN];
 static uint16_t ccc_handles[MAX_CONN];
-
 // Discovery parameters per connection (could be static or allocated per connection)
 struct bt_gatt_discover_params discover_params[MAX_CONN];
 struct bt_gatt_discover_params cccd_discover_params[MAX_CONN];
+
+struct sensor_packet_t {
+    uint8_t data[64];
+};
+
+#define MSGQ_MAX_MSGS 10  // adjust if needed
+K_MSGQ_DEFINE(sensor_msgq, sizeof(struct sensor_packet_t), MSGQ_MAX_MSGS, 4);
 
 /** FUNCTION PROTOTYPES*/
 static uint8_t discover_func(struct bt_conn *conn,
@@ -86,61 +91,76 @@ static bool is_uuid_in_ad(struct net_buf_simple *ad, const struct bt_uuid *uuid)
 
 static uint8_t notify_func(struct bt_conn *conn, struct bt_gatt_subscribe_params *params,
                            const void *data, uint16_t length) {
-    int index = get_conn_index(conn);
-
-    if (!data || length != 64) {  // Now expect 64 bytes total
-        printk("[TRACKER %d] Invalid or no notification data (len = %d)\n", index, length);
+    if (!data || length != 64) {
         return BT_GATT_ITER_CONTINUE;
     }
 
-    const uint8_t *d = data;
+    struct sensor_packet_t pkt;
+    memcpy(pkt.data, data, 64);
 
-    // Unpack sensor data starting at offset 32
-    uint8_t hour   = d[32];
-    uint8_t minute = d[33];
-    uint8_t second = d[34];
-
-    int32_t lat = (d[35] << 24) | (d[36] << 16) | (d[37] << 8) | d[38];
-    char ns = (char)d[39];
-
-    int32_t lon = (d[40] << 24) | (d[41] << 16) | (d[42] << 8) | d[43];
-    char ew = (char)d[44];
-
-    int16_t alt = (d[45] << 8) | d[46];
-    uint8_t sat = d[47];
-
-    int16_t temp = (d[48] << 8) | d[49];
-    int16_t hum  = (d[50] << 8) | d[51];
-
-    int16_t press = (d[52] << 8) | d[53];
-    int16_t gas   = (d[54] << 8) | d[55];
-
-    int16_t x = (d[56] << 8) | d[57];
-    int16_t y = (d[58] << 8) | d[59];
-    int16_t z = (d[60] << 8) | d[61];
-
-    printk("[TRACKER %d] Time: %02d:%02d:%02d\n", index, hour, minute, second);
-    printk("[TRACKER %d] Lat: %.7f %c | Lon: %.7f %c | Alt: %.1f m | Sats: %d\n",
-       index, lat / 1e7, ns, lon / 1e7, ew, alt / 10.0, sat);
-
-    printk("[TRACKER %d] Temp: %.2f °C | Hum: %.2f %% | Press: %.1f hPa | Gas: %.2f\n",
-       index, temp / 100.0, hum / 100.0, press / 10.0, gas / 100.0);
-
-    printk("[TRACKER %d] Accel: X=%.3f Y=%.3f Z=%.3f m/s²\n",
-       index, x / 1000.0, y / 1000.0, z / 1000.0);
-
-
-    // // Print hash (SHA-256 is 32 bytes)
-    // printk("[TRACKER] Hash: ");
-    // for (int i = 0; i < 32; i++) {
-    //     printk("%02X ", d[i]);
-    // }
-    // printk("\n");
-
+    int ret = k_msgq_put(&sensor_msgq, &pkt, K_NO_WAIT);
+    if (ret != 0) {
+        // Optional: handle dropped packet (queue full)
+    }
 
     return BT_GATT_ITER_CONTINUE;
 }
 
+extern void process_data_thread(void) {
+    struct sensor_packet_t pkt;
+
+    while (1) {
+        k_msgq_get(&sensor_msgq, &pkt, K_FOREVER);
+
+        // Copy first 32 bytes into hash array
+        uint8_t hash[32];
+        memcpy(hash, pkt.data, 32);  // or manually if avoiding memcpy
+
+        // Unpack sensor data starting at offset 32
+        uint8_t hour   = pkt.data[32];
+        uint8_t minute = pkt.data[33];
+        uint8_t second = pkt.data[34];
+
+        int32_t lat = (pkt.data[35] << 24) | (pkt.data[36] << 16) | (pkt.data[37] << 8) | pkt.data[38];
+        char ns = (char)pkt.data[39];
+
+        int32_t lon = (pkt.data[40] << 24) | (pkt.data[41] << 16) | (pkt.data[42] << 8) | pkt.data[43];
+        char ew = (char)pkt.data[44];
+
+        int16_t alt = (pkt.data[45] << 8) | pkt.data[46];
+        uint8_t sat = pkt.data[47];
+
+        int16_t temp = (pkt.data[48] << 8) | pkt.data[49];
+        int16_t hum  = (pkt.data[50] << 8) | pkt.data[51];
+
+        int16_t press = (pkt.data[52] << 8) | pkt.data[53];
+        int16_t gas   = (pkt.data[54] << 8) | pkt.data[55];
+
+        int16_t x = (pkt.data[56] << 8) | pkt.data[57];
+        int16_t y = (pkt.data[58] << 8) | pkt.data[59];
+        int16_t z = (pkt.data[60] << 8) | pkt.data[61];
+
+        int16_t dev_id = (pkt.data[62]);
+
+        // Optionally: process `hash` or log/display it        
+        printk("[TRACKER %d] Time: %02d:%02d:%02d\n", dev_id, hour, minute, second);
+        printk("[TRACKER %d] Lat: %.7f %c | Lon: %.7f %c | Alt: %.1f m | Sats: %d\n", dev_id,
+        lat / 1e7, ns, lon / 1e7, ew, alt / 10.0, sat);
+
+        printk("[TRACKER %d] Temp: %.2f °C | Hum: %.2f %% | Press: %.1f hPa | Gas: %.2f\n", dev_id,
+        temp / 100.0, hum / 100.0, press / 10.0, gas / 100.0);
+
+        printk("[TRACKER %d] Accel: X=%.3f Y=%.3f Z=%.3f m/s²\n", dev_id, x / 1000.0, y / 1000.0, z / 1000.0);
+
+
+        // // Print hash (SHA-256 is 32 bytes)
+        // printk("[TRACKER] Hash: ");
+        // for (int i = 0; i < 32; i++) {
+        //     printk("%02X ", hash[i]);
+        // }
+        // printk("\n");
+    }
+}
 
 // Step 1: Discover characteristic
 static uint8_t discover_func(struct bt_conn *conn,

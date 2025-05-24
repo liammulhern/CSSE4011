@@ -17,6 +17,8 @@
 static struct bt_conn *current_conn;
 static bool notify_enabled = false;  // NEW
 
+#define DEV_ID 1
+
 // Global buffer holding packed sensor data (14 bytes)
 #define PACKED_DATA_LEN 64
 uint8_t packed_data[PACKED_DATA_LEN];
@@ -282,7 +284,7 @@ void pack_sensor_data(const struct sensor_blk *sensor) {
     packed_data[61] = z_fixed & 0xFF;
 
     // Zero padding bytes 62, 63
-    packed_data[62] = 0;
+    packed_data[62] = DEV_ID & 0xFF;
     packed_data[63] = 0;
 
     // Send notification if enabled and connected
