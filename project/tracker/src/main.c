@@ -50,7 +50,7 @@ static const gpio_pin_t rgb_pins[] = {
 const struct device *sx1509b_dev;
 
 #define ALARM_CHANNEL_ID 0
-#define UPDATE 60// Update window (interrupts)
+#define UPDATE 20// Update window (interrupts)
 #define SAMPLE_RATE 500 // Time between samples grabbed in a row while awake
 #define X_THRESHOLD 2
 #define Y_THRESHOLD 2
@@ -85,6 +85,13 @@ int accel_tick = 0;
 //     int16_t z_accel;
 // };
 
+struct flash_consts {
+    uint32_t size;
+    uint32_t read_size;
+    uint32_t tail;
+    uint32_t head;
+    uint8_t wrap_around;
+};
 
 static struct neom9n_api *neo_api;
 
@@ -255,61 +262,79 @@ int read_sensors(int16_t *temp, int16_t *hum, int16_t *press,
     return 0;
 }
 
+void write_consts(const struct device *flash_dev, uint8_t write_block_size, 
+    uint32_t size, uint32_t read_size, uint32_t head, uint32_t tail, uint8_t wrap_around) {
+    //LOG_INF("Writing constants: %u    %u     %u      %u       %u\n", size, read_size, head, tail, wrap_around);
+    struct flash_consts flash_vars;
+    flash_vars.size = size;
+    flash_vars.read_size = read_size;
+    flash_vars.head = head;
+    flash_vars.tail = tail;
+    flash_vars.wrap_around = wrap_around;
+    uint8_t flash_byte_arr[sizeof(struct flash_consts)];
+    memcpy(&flash_byte_arr, &flash_vars, sizeof(struct flash_consts));
+    uint8_t write_cycles = sizeof(struct flash_consts) / write_block_size;
+    uint32_t offset;
+    flash_erase(flash_dev, TEST_PARTITION_OFFSET, FLASH_PAGE_SIZE);
+    for (int j = 0; j < write_cycles; j++) {
+        offset = TEST_PARTITION_OFFSET + j * write_block_size;
+        flash_write(flash_dev, offset, &flash_byte_arr[j * write_block_size], write_block_size);
+    }
+}
+
+
 // TODO: trigger from ble connect 
 void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
+    //LOG_INF("Read call\n");
     // Triggered from bluetooth wakeup
-    uint8_t size = 0;
-     uint32_t read_size = 0;
+    struct flash_consts flash_vars;
+    uint32_t read_size = 0;
     uint32_t offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET;
-    flash_read(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size);
-    flash_read(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size);
+    flash_read(flash_dev, TEST_PARTITION_OFFSET, &flash_vars, sizeof(struct flash_consts));
+    //LOG_INF("read consts:     %u      %u        %u       %u      %u\n", flash_vars.size, flash_vars.read_size, flash_vars.head, flash_vars.tail, flash_vars.wrap_around);
     struct sensor_blk sensors;
-    offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + (read_size * sizeof(struct sensor_blk));
+    //offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + (read_size * sizeof(struct sensor_blk));
+    offset = flash_vars.tail + (read_size * sizeof(struct sensor_blk));
     // Unpacks data since last bluetooth grab
     // Im blue dabadeebadubah
-    for (int i = read_size; i < size; i++) {
-
+    for (int i = read_size; i < flash_vars.size; i++) {
+        if (offset >= 0x00080000) {
+            LOG_INF("wrapping around in read\n");
+            offset = TEST_PARTITION_OFFSET + FLASH_PAGE_SIZE;
+        }
+        if (offset == flash_vars.head) {
+            LOG_WRN("Read past head\n");
+            break;
+        }
         // read out single struct of data
         flash_read(flash_dev, offset, &sensors, sizeof(sensors));
+        //LOG_INF("Read: %d     %d       %d       %d\n", sensors.temp, sensors.hum, sensors.press, sensors.gas);
         offset += sizeof(sensors);
         read_size++;
-        //LOG_INF("read: %d     %d      %d       %d        %d       %d        %d\n", 
-        //    sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
-        //LOG_INF("gps read: %f      %f      %f", sensors.lat, sensors.lon, sensors.alt);
-        // TODO: send sensors struct over bluetooth
-        
         /* BLUETOOTH ADDITIONS*/
         // Sensor data packed into bluetooth packet and base notified to request packet (sending packet)
         pack_sensor_data(&sensors);
         /*--------------------*/
 
     }
-
+    flash_vars.read_size = read_size;
     //set the new "latest read offset"
-    flash_erase(flash_dev, TEST_PARTITION_OFFSET, FLASH_PAGE_SIZE);
-    if (flash_write(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size)) {
-         LOG_WRN("Size not updated\n");   
-    }
-    if (flash_write(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size)) {
-        LOG_WRN("Read size was not updated!\n");
-    }
+    write_consts(flash_dev, write_block_size, flash_vars.size, flash_vars.read_size, flash_vars.head, flash_vars.tail, flash_vars.wrap_around);
+    return;
 }
 
 void write_loop(const struct device *flash_dev, uint8_t write_block_size) {
+    //LOG_INF("Write call\n");
     struct sensor_blk sensors;
     int sat;
     int err;
-    uint32_t size = 0;
     uint8_t byte_array[sizeof(struct sensor_blk)];
     uint8_t write_cycles = sizeof(sensors) / write_block_size;
-    flash_read(flash_dev, TEST_PARTITION_OFFSET, &size, sizeof(uint32_t));
-    uint32_t offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors)));
+    struct flash_consts flash_vars;
+    flash_read(flash_dev, TEST_PARTITION_OFFSET, &flash_vars, sizeof(struct flash_consts));
+    //LOG_INF("write consts:     %u      %u        %u       %u      %u\n", flash_vars.size, flash_vars.read_size, flash_vars.head, flash_vars.tail, flash_vars.wrap_around);
+    uint32_t offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((flash_vars.size) * (sizeof(sensors)));
     // Im red like roses
-    sensors.lat = 1;
-    sensors.ns = 1;
-    sensors.lon = 1;
-    sensors.ew = 1;
-    sensors.alt = 1;
     uint8_t retry = 0;
     for (int i = 0; i < MAX_SAMPLES; i++) {
         // Sleep for some time before grabbing more data
@@ -340,27 +365,57 @@ read_data:
                 goto read_data;
             }
         }
+         if (offset >= 0x00080000) {
+            offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET;
+            LOG_INF("Wrapping around in write\n");
+            // Wrap around to start of writtable flash erase oldest 64 data structs. 
+            flash_erase(flash_dev, offset, FLASH_PAGE_SIZE);
+            flash_vars.wrap_around++;
+            if (flash_vars.size <= 64) {
+                flash_vars.size = 0;
+            } else {
+                flash_vars.size -= 64; 
+            }
+            if (flash_vars.read_size <= 64) {
+                flash_vars.read_size = 0;
+            } else {
+                flash_vars.read_size -= 64;
+            }
+            flash_vars.head = offset;
+            flash_vars.tail = flash_vars.head + FLASH_PAGE_SIZE; // 1 Page beyond head where to start reading from.
+        } else if ((offset - TEST_PARTITION_OFFSET) % FLASH_PAGE_SIZE == 0) {
+            // Erase next page preparing for writing.
+            // Starting next page 
+            LOG_INF("Erasing next page in write\n");
+            flash_erase(flash_dev, offset, FLASH_PAGE_SIZE);
+            if (flash_vars.wrap_around) {
+                flash_vars.head = offset;
+                flash_vars.tail = flash_vars.head + FLASH_PAGE_SIZE;
+                if (flash_vars.size <= 64) {
+                    flash_vars.size = 0;
+                } else {
+                    flash_vars.size -= 64; 
+                }
+                if (flash_vars.read_size <= 64) {
+                    flash_vars.read_size = 0;
+                } else {
+                    flash_vars.read_size -= 64;
+                }
 
+            }
+        }
+
+        //LOG_INF("Write: %d     %d       %d       %d\n", sensors.temp, sensors.hum, sensors.press, sensors.gas);
         sensors.uptime = k_uptime_seconds();
         memcpy(&byte_array, &(sensors), sizeof(sensors));
-        //LOG_INF("GPS: %f      %f      %f \n", sensors.lat, sensors.lon, sensors.alt);
-        //LOG_INF("write: %d     %d      %d       %d        %d       %d        %d\n", 
-        //    sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
         for (int j = 0; j < write_cycles; j++) {
-            offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors))) + j * write_block_size;
+            offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((flash_vars.size) * (sizeof(sensors))) + j * write_block_size;
             flash_write(flash_dev, offset, &byte_array[j * write_block_size], write_block_size);
         }
-        size++;
+        flash_vars.size++;
+        flash_vars.head = offset;
     }
-    uint32_t read_size;
-    flash_read(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size);
-    flash_erase(flash_dev, TEST_PARTITION_OFFSET, FLASH_PAGE_SIZE);
-    if (flash_write(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size)) {
-         LOG_WRN("Size not updated");   
-    }
-    if (flash_write(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size)) {
-        LOG_WRN("Last read offset was not updated!\n");
-    }
+    write_consts(flash_dev, write_block_size, flash_vars.size, flash_vars.read_size, flash_vars.head, flash_vars.tail, flash_vars.wrap_around);
     return;
 }
 
@@ -447,12 +502,13 @@ int main(void) {
                             &odr);
     err = sensor_trigger_set(accel, &trig, accel_handler);
 
-    uint32_t size = 0;
-    uint32_t read_size = 0;
+    //flash_erase(flash_dev, TEST_PARTITION_OFFSET, FLASH_PAGE_SIZE + 6);
+    write_consts(flash_dev, write_block_size, 0, 0, 
+        TEST_PARTITION_OFFSET + FLASH_PAGE_SIZE, TEST_PARTITION_OFFSET + FLASH_PAGE_SIZE, 0);
     LOG_INF( "%u\n", sizeof(struct sensor_blk));
-    flash_erase(flash_dev, TEST_PARTITION_OFFSET, FLASH_PAGE_SIZE * 6);
-    flash_write(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size);
-    flash_write(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size);
+    //flash_erase(flash_dev, TEST_PARTITION_OFFSET, FLASH_PAGE_SIZE * 6);
+    // flash_write(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size);
+    // flash_write(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size);
     rtc_tick = 1;
 
     // Accuatoor: red on rtc, green on accel, blue on ble
@@ -478,7 +534,7 @@ int main(void) {
              // Advertising started, ble_tick set on connection (in bluetooth.c file); accessible through get_ble_tick()
             start_advertising(); 
             /*--------------------*/
-
+            read_loop(flash_dev, write_block_size);
             
 
         } else if (accel_tick) {
