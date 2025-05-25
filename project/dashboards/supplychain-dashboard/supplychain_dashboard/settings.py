@@ -44,7 +44,6 @@ INSTALLED_APPS = [
     # apps
     'accounts',
     'supplychain',
-    'abac',
 ]
 
 MIDDLEWARE = [
@@ -89,15 +88,15 @@ AUTH_USER_MODEL = 'accounts.User'
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    'abac.backend.ABACBackend',
 ]
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'accounts.auth.QRAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
+        'accounts.permissions.IsCompanyAdminOrReadOnly',
     ),
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',

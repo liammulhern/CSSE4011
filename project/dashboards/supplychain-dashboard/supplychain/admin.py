@@ -81,7 +81,6 @@ class ProductOrderItemAdmin(admin.ModelAdmin):
     list_display = (
         'order',
         'product',
-        'quantity',
     )
     list_filter = (
         'order',
@@ -179,20 +178,20 @@ class SupplyChainRequirementAdmin(admin.ModelAdmin):
         'name',
         'unit',
         'attribute_type',
-        'company',
+        'owner',
         'created_timestamp',
     )
     list_filter = (
         'attribute_type',
         'unit',
-        'company',
+        'owner',
         'created_timestamp',
     )
     search_fields = (
         'name',
-        'company__name',
+        'owern__name',
     )
     raw_id_fields = (
-        'company',
+        'owner',
     )
     date_hierarchy = 'created_timestamp'

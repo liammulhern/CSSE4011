@@ -19,7 +19,6 @@ class ProductOrderItemSerializer(serializers.ModelSerializer):
         fields = [
             'product',
             'product_key',
-            'quantity',
         ]
 
 

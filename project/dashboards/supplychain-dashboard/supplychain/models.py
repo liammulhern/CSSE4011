@@ -113,7 +113,7 @@ class ProductType(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='product_types',
+        related_name='product_types_owner',
         help_text="Current owning company."
     )
 
@@ -148,7 +148,7 @@ class Product(models.Model):
     product_type = models.ForeignKey(
         ProductType,
         on_delete=models.PROTECT,
-        related_name="instances",
+        related_name="products",
         help_text="The SKU / type this serial belongs to.",
         null=True,
         blank=True
@@ -682,7 +682,7 @@ class SupplyChainRequirement(models.Model):
         help_text='Type of data this requirement expects.'
     )
 
-    company = models.ForeignKey(
+    owner = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
         related_name='supply_requirements',
@@ -828,10 +828,6 @@ class ProductOrderItem(models.Model):
         help_text='The specific product being ordered.'
     )
 
-    quantity = models.PositiveIntegerField(
-        help_text='Number of units ordered.'
-    )
-
     class Meta:
         verbose_name = 'Product Order Item'
         verbose_name_plural = 'Product Order Items'
@@ -839,7 +835,7 @@ class ProductOrderItem(models.Model):
         ordering = ['order']
 
     def __str__(self):
-        return f'{self.quantity} × {self.product.product_key}'
+        return f'{self.product.product_key}'
 
 
 class ProductOrderRequirement(models.Model):

@@ -14,7 +14,6 @@ from supplychain.serialisers.serialiser_events import (
 class TrackerEventViewSet(viewsets.ModelViewSet):
     queryset = TrackerEvent.objects.all()
     serializer_class = TrackerEventSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     @action(detail=True, methods=['post'], url_path='verify')
     def verify(self, request, pk=None):
@@ -36,7 +35,6 @@ class TrackerEventViewSet(viewsets.ModelViewSet):
 class ProductEventViewSet(viewsets.ModelViewSet):
     queryset = ProductEvent.objects.select_related('product', 'trackerevent', 'recorded_by')
     serializer_class = ProductEventSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         serializer.save(recorded_by=self.request.user)
@@ -76,7 +74,6 @@ class ProductEventViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
 def verify_event_hashes(request):
     """
     POST /events/verify-block-hashes/

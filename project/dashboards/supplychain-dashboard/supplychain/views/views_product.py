@@ -5,7 +5,8 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from accounts.permissions import IsAuthenticatedOrValidQR, QRAuthentication
+from accounts.permissions import IsAuthenticatedOrValidQR 
+from accounts.auth import QRAuthentication
 
 from supplychain.serialisers.serialiser_product import ProductSerializer
 from supplychain.serialisers.serialiser_events import ProductEventSerializer

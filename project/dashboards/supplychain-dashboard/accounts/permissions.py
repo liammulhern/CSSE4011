@@ -1,11 +1,11 @@
-from django.conf import settings
-from django.contrib.auth.models import AnonymousUser
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-from rest_framework.authentication import BaseAuthentication
-from rest_framework import exceptions
-from rest_framework.permissions import BasePermission
+from accounts.utils import get_user_roles
 
-import jwt
+from accounts.models import Role
+
+from supplychain.models import ProductOrder
+
 
 class IsAuthenticatedOrValidQR(BasePermission):
     """
@@ -36,24 +36,48 @@ class IsAuthenticatedOrValidQR(BasePermission):
 
         return token_id == url_id
 
-class QRAuthentication(BaseAuthentication):
+class IsCompanyAdminOrReadOnly(BasePermission):
     """
-    Look for `?token=` in the querystring, decode it, and stash it on request.qr_payload.
+    - Any member (admin or viewer) may READ (GET, HEAD, OPTIONS)
+      on objects owned by their company.
+    - Only an ADMIN may CREATE / UPDATE / DELETE on those objects.
     """
-    def authenticate(self, request):
-        token = request.query_params.get("token")
-        if not token:
-            return None
+    message = "You must be a company member to view, or an admin to modify."
 
-        try:
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        except jwt.ExpiredSignatureError:
-            raise exceptions.AuthenticationFailed("QR token expired")
-        except jwt.InvalidTokenError:
-            raise exceptions.AuthenticationFailed("Invalid QR token")
+    def has_object_permission(self, request, view, obj):
 
-        if payload.get("type") != "qr":
-            raise exceptions.AuthenticationFailed("Invalid QR token type")
+        print(f"Roles for user {request} {obj}")
 
-        request.qr_payload = payload
-        return (AnonymousUser(), None)
+        # If the object has an owner, check if the user is a member of that company
+        if getattr(obj, "owner", None):
+            roles = get_user_roles(request.user, obj.owner)
+
+            if len(roles) > 0:
+                # 2) safe methods allowed for all members
+                if request.method in SAFE_METHODS:
+                    return True
+
+                # 3) only admins can write
+                return Role.ADMIN in roles
+
+        # If you are the owning company 
+        if getattr(obj, "supplier", None):
+            roles = get_user_roles(request.user, obj.supplier)
+
+            if len(roles) > 0:
+                # 2) safe methods allowed for all members
+                if request.method in SAFE_METHODS:
+                    return True
+
+                # 3) only admins can write
+                return Role.ADMIN in roles
+
+
+        # If you aren’t in the owning company BUT you’re
+        # in the assigned company and it’s a READ, allow:
+        if getattr(obj, "receiver", None) and request.method in SAFE_METHODS:
+            roles = get_user_roles(request.user, obj.receiver)
+
+            return len(roles) > 0
+
+        return False

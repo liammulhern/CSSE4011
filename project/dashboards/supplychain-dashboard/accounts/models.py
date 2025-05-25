@@ -49,15 +49,6 @@ class User(AbstractUser):
     """
     Custom user with a link to Company.
     """
-    company = models.ForeignKey(
-        Company,
-        on_delete=models.CASCADE,
-        related_name='users',
-        null=True,
-        blank=True,
-        help_text="Company this user belongs to."
-    )
-
     class Meta:
         verbose_name = "User"
         verbose_name_plural = "Users"
@@ -66,14 +57,64 @@ class User(AbstractUser):
         return self.username
 
 
+class UserCompany(models.Model):
+    """
+    Links Users to Companies.
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='user_companies',
+        help_text="User assigned to this company."
+    )
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='company_users',
+        help_text="Company assigned to the user."
+    )
+
+    assigned_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this user was assigned to the company."
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Is this user currently active in the company?"
+    )
+
+    class Meta:
+        unique_together = ('user', 'company')
+        verbose_name = "User Company"
+        verbose_name_plural = "User Companies"
+
+    def __str__(self):
+        return f"{self.user} → {self.company}"
+
+
 class Role(models.Model):
     """
     Represents a high-level permission set (e.g., admin, viewer).
     """
+    ADMIN   = "admin"
+    VIEWER  = "viewer"
+    ROLE_CHOICES = [
+        (ADMIN,  "Company Admin"),
+        (VIEWER, "Company Viewer"),
+    ]
+
     name = models.CharField(
-        max_length=50,
-        unique=True,
-        help_text="Name of the role, e.g. 'admin', 'viewer'."
+        max_length=20,
+        choices=ROLE_CHOICES,
+    )
+
+    company = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='company_roles',
+        help_text="Company this role belongs to."
     )
 
     class Meta:
@@ -82,7 +123,7 @@ class Role(models.Model):
         verbose_name_plural = "Roles"
 
     def __str__(self):
-        return self.name
+        return f"{self.name} → {self.company.name}"
 
 
 class UserRole(models.Model):

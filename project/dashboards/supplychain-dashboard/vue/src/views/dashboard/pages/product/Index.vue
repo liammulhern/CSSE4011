@@ -27,7 +27,7 @@ const showQr = ref(false)
 
 // build a reactive full-URL string (origin + path + query + hash)
 const currentFullUrl = computed(() => {
-  return `${window.location.origin}${route.fullPath}`
+  return `${window.location.origin}${route.path}`
 })
 
 async function fetchQr(id: string) {

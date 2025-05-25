@@ -12,7 +12,6 @@ class TrackerViewSet(viewsets.ModelViewSet):
     """
     queryset = Tracker.objects.select_related('owner').all()
     serializer_class = TrackerSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     @action(detail=True, methods=['get'], url_path='events')
     def events(self, request, pk=None):

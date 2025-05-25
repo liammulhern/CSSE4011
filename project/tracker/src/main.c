@@ -1,92 +1,59 @@
+
 #include <zephyr/kernel.h>
-#include <zephyr/device.h>
-#include <zephyr/logging/log.h>
+#include <zephyr/sys/printk.h>
+#include <drivers/nfc/t2t/tag.h>
+#include <nfc/ndef/msg.h>
+#include <m
+#include <nfc/ndef/uri_rec.h>
 
-#include <drivers/gnss/ublox_neo_m9n.h>
+/* 1) The actual URI string you want to encode (no URI prefix!) */
+static u8_t payload[] = "example.com/my/path";
 
-LOG_MODULE_DECLARE(neom9n, CONFIG_UBLOX_NEO_M9N_LOG_LEVEL);
+/* 2) Build the URI record descriptor: */
+static const struct nfc_ndef_uri_record_desc uri_rec =
+    NFC_NDEF_URI_RECORD_DESC(UTF_8,
+                             NFC_URI_HTTP_WWW, /* will prepend "http://www." */
+                             payload);
 
-#define NEO_SERIAL DT_NODELABEL(neom9n)
-
-static const struct device *neo_dev;
-static struct neom9n_api *neo_api;
+/* 3) Wrap into an NDEF message: */
+static struct nfc_ndef_msg_desc nfc_msg =
+    NFC_NDEF_MSG_DESC(uri_rec);
 
 int main(void)
 {
-    int rc;
-    struct time neotime;
-    float lat;
-    char ns;
-    float lon;
-    char ew;
-    float alt;
-    int sat;
-    int i = 0;
+    int err;
+    size_t len;
 
-    neo_dev = DEVICE_DT_GET(NEO_SERIAL);
+    printk("Starting NFC URI emulation...\n");
 
-    if (!device_is_ready(neo_dev)) {
-        LOG_ERR("%s Device not ready", neo_dev->name);
-        return 0;
+    /* 4) Encode the message into the T2T memory buffer */
+    err = nfc_t2t_tag_mem_init();
+    if (err) {
+        printk("  tag_mem_init failed: %d\n", err);
+        return err;
     }
 
-    const struct neom9n_config *cfg = neo_dev->config;
-
-    LOG_DBG("%s", cfg->i2c_dev->name);
-
-    neo_api = (struct neom9n_api *) neo_dev->api;
-
-    neo_api->cfg_nav5(neo_dev, Stationary, P_2D, 0, 1, 5, 100, 100, 100, 350, 0, 60, 0, 0, 0,
-              AutoUTC);
-    neo_api->cfg_gnss(neo_dev, 0, 32, 5, 0, 8, 16, 0, 0x01010001, 1, 1, 3, 0, 0x01010001, 3, 8,
-              16, 0, 0x01010000, 5, 0, 3, 0, 0x01010001, 6, 8, 14, 0, 0x01010001);
-    neo_api->cfg_msg(neo_dev, NMEA_DTM, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GBQ, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GBS, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GLL, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GLQ, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GNQ, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GNS, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GPQ, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GRS, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GSA, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GST, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_GSV, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_RMC, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_THS, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_TXT, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_VLW, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_VTG, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_ZDA, 0);
-
-    while (1) {
-        rc = neo_api->fetch_data(neo_dev);
-
-        if (rc) {
-            LOG_ERR("HERE: Error %d while reading data", rc);
-            return 0;
-        }
-
-        if (i++ == 1000) {
-            i = 0;
-
-            neo_api->get_time(neo_dev, &neotime);
-            neo_api->get_latitude(neo_dev, &lat);
-            neo_api->get_ns(neo_dev, &ns);
-            neo_api->get_longitude(neo_dev, &lon);
-            neo_api->get_ew(neo_dev, &ew);
-            neo_api->get_altitude(neo_dev, &alt);
-            neo_api->get_satellites(neo_dev, &sat);
-
-            LOG_INF("Hour: %d\n\r", neotime.hour);
-            LOG_INF("Minute: %d\n\r", neotime.min);
-            LOG_INF("Second: %d\n\r", neotime.sec);
-            LOG_INF("Latitude: %.5f\n\r", (double) lat);
-            LOG_INF("North/South: %c\n\r", ns);
-            LOG_INF("Longitude: %.5f\n\r", (double) lon);
-            LOG_INF("East/West: %c\n\r", ew);
-            LOG_INF("Altitude: %.2f\n\r", (double) alt);
-            LOG_INF("Satellites: %d\n\r\n\r", sat);
-        }
+    err = nfc_ndef_msg_enc(&nfc_msg, NULL, &len);
+    if (err) {
+        printk("  NDEF encode failed: %d\n", err);
+        return err;
     }
+
+    err = nfc_t2t_tag_mem_write(nfc_t2t_tag_mem_get(), len);
+    if (err) {
+        printk("  tag_mem_write failed: %d\n", err);
+        return err;
+    }
+
+    /* 5) Start the emulation: */
+    err = nfc_t2t_emulation_start();
+    if (err) {
+        printk("  emulation_start failed: %d\n", err);
+        return err;
+    }
+
+    printk("  NFC tag active—tap a phone to read URI!\n");
+
+    return 0;
 }
+
