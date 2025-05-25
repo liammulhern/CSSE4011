@@ -444,3 +444,22 @@ void tracker_thread(void) {
         k_sleep(K_SECONDS(10));  // Wait before restarting next advertisement cycle
     }
 }
+
+//MAIN.C bluetooth test
+// #include <zephyr/kernel.h>
+// #include <zephyr/types.h>
+// #include <zephyr/sys/printk.h>
+// #include <zephyr/logging/log.h>
+// #include <zephyr/net_buf.h>
+// #include <zephyr/bluetooth/bluetooth.h>
+// #include <zephyr/bluetooth/conn.h>
+// #include <zephyr/bluetooth/gatt.h>
+// #include <zephyr/bluetooth/hci.h>
+
+// #include <tinycrypt/sha256.h>
+// #include <tinycrypt/constants.h>
+// #include <string.h>
+
+// #include <bluetooth.h>
+
+// K_THREAD_DEFINE(tracker_tid, TRACKER_CONTROL_STACK_SIZE, tracker_thread, NULL, NULL, NULL, TRACKER_CONTROL_PRIORITY, 0, 0);
