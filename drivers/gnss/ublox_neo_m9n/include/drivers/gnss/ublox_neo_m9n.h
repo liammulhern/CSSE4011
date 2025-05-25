@@ -77,13 +77,18 @@ struct neom9n_data {
     uint8_t _buffer[MAX_NMEA_SIZE];
 
     struct time {
-        uint8_t day;
-        uint8_t month;
-        uint16_t year;
         uint8_t hour;
         uint8_t min;
         uint8_t sec;
     } time;
+
+    struct {
+        uint16_t year;
+        uint8_t  month, day;
+    } date;
+
+    int8_t   tz_offset_hours;
+    uint8_t  tz_offset_minutes;
 
     float longitude_min;
     float latitude_min;
