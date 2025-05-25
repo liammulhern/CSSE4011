@@ -202,17 +202,17 @@ static void print_packed_data() {
     printk("\n");
 
     printk("  Time: %02d:%02d:%02d\n", hour, minute, second);
-    printk("  Latitude: %.7f %c\n", lat / 1e7f, ns);
-    printk("  Longitude: %.7f %c\n", lon / 1e7f, ew);
-    printk("  Altitude: %.1f m\n", alt / 10.0f);
+    printk("  Latitude: %.7f %c\n", lat / 1e7, ns);
+    printk("  Longitude: %.7f %c\n", lon / 1e7, ew);
+    printk("  Altitude: %.1f m\n", alt / 10.0);
     printk("  Satellites: %d\n", sat);
-    printk("  Temperature: %.2f °C\n", temp / 100.0f);
-    printk("  Humidity: %.2f %%\n", hum / 100.0f);
-    printk("  Pressure: %.1f hPa\n", press / 10.0f);
-    printk("  Gas: %.1f units\n", gas / 100.0f);
-    printk("  Accel X: %.3f m/s²\n", x / 1000.0f);
-    printk("  Accel Y: %.3f m/s²\n", y / 1000.0f);
-    printk("  Accel Z: %.3f m/s²\n", z / 1000.0f);
+    printk("  Temperature: %.2f °C\n", temp / 100.0);
+    printk("  Humidity: %.2f %%\n", hum / 100.0);
+    printk("  Pressure: %.1f hPa\n", press / 10.0);
+    printk("  Gas: %.1f units\n", gas / 100.0);
+    printk("  Accel X: %.3f m/s²\n", x / 1000.0);
+    printk("  Accel Y: %.3f m/s²\n", y / 1000.0);
+    printk("  Accel Z: %.3f m/s²\n", z / 1000.0);
 }
 
 void pack_sensor_data(const struct sensor_blk *sensor) {
@@ -413,6 +413,81 @@ void tracker_thread(void) {
         k_sleep(K_SECONDS(10));  // Wait before restarting next advertisement cycle
     }
 }
+
+void tracker_thread(void) {
+    int err;
+
+    err = init_bluetooth();
+    if (err) {
+        printk("[TRACKER] Bluetooth init failed\n");
+        return;
+    }
+
+    // Example sensor data
+    struct sensor_blk sensor = {
+        .hour = 12,
+        .minute = 34,
+        .second = 56,
+        .lat = 37.7699999f,
+        .ns = 'N',
+        .lon = -122.419998f,
+        .ew = 'W',
+        .alt = 12.3f,
+        .sat = 7,
+        .temp = 23.50,
+        .hum = 45.67,
+        .press = 1013.2,
+        .gas = 52.3,
+        .x_accel = -0.900,
+        .y_accel = 0.200,
+        .z_accel = 0.985
+    };
+
+    uint8_t digest[TC_SHA256_DIGEST_SIZE];
+    hash_sensor_blk(&sensor, digest);
+
+    print_sha256_digest(digest);
+
+    while (1) {
+        err = start_advertising();
+        if (err) {
+            printk("[TRACKER] Advertising failed to start\n");
+            return;
+        }
+        k_msleep(3000);  // Wait before restarting next advertisement cycle
+        // Advertise sensor data 5 times, once per second
+        for (int i = 0; i < 5; i++) {
+            pack_sensor_data(&sensor);
+            print_packed_data();
+
+            // Simulate sensor updates
+            sensor.second = (sensor.second + 1) % 60;
+            sensor.temp += 0.1;
+            sensor.hum += 0.1;
+            sensor.press += 0.1;
+
+            // k_msleep(100); 
+        }
+        k_msleep(1500); 
+        err = stop_advertising();
+        if (err) {
+            printk("[TRACKER] Failed to stop advertising\n");
+        }
+
+        if (current_conn) {
+            err = bt_conn_disconnect(current_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+            if (err) {
+                printk("[TRACKER] Disconnection failed (err %d)\n", err);
+            } else {
+                printk("[TRACKER] Disconnection initiated\n");
+            }
+        }
+
+        printk("[TRACKER] Sleeping before next cycle...\n");
+        k_sleep(K_SECONDS(10));  // Wait before restarting next advertisement cycle
+    }
+}
+
 
 #define TRACKER_CONTROL_STACK_SIZE 2048
 #define TRACKER_CONTROL_PRIORITY 5

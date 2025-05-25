@@ -6,9 +6,12 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci.h>
 #include <zephyr/bluetooth/uuid.h>
+#include <zephyr/logging/log.h>
 
 #include <bluetooth.h>
-#include <string.h>  // required for memcpy
+#include <json.h>
+
+LOG_MODULE_REGISTER(bluetooth_module);
 
 // UUIDs for tracker service and characteristic
 static struct bt_uuid_128 tracker_service_uuid = BT_UUID_INIT_128(
@@ -112,53 +115,44 @@ extern void process_data_thread(void) {
     while (1) {
         k_msgq_get(&sensor_msgq, &pkt, K_FOREVER);
 
+        tracker_payload_t payload;
+
         // Copy first 32 bytes into hash array
-        uint8_t hash[32];
-        memcpy(hash, pkt.data, 32);  // or manually if avoiding memcpy
+        memcpy(payload.hash, pkt.data, 32);  // or manually if avoiding memcpy
 
-        // Unpack sensor data starting at offset 32
-        uint8_t hour   = pkt.data[32];
-        uint8_t minute = pkt.data[33];
-        uint8_t second = pkt.data[34];
+        payload.hour   = pkt.data[32];
+        payload.minute = pkt.data[33];
+        payload.second = pkt.data[34];
 
-        int32_t lat = (pkt.data[35] << 24) | (pkt.data[36] << 16) | (pkt.data[37] << 8) | pkt.data[38];
-        char ns = (char)pkt.data[39];
+        payload.lat= (pkt.data[35] << 24) | (pkt.data[36] << 16) |
+                        (pkt.data[37] << 8)  |  pkt.data[38];
+        payload.ns = (char)pkt.data[39];
 
-        int32_t lon = (pkt.data[40] << 24) | (pkt.data[41] << 16) | (pkt.data[42] << 8) | pkt.data[43];
-        char ew = (char)pkt.data[44];
+        payload.lon = (pkt.data[40] << 24) | (pkt.data[41] << 16) |
+                            (pkt.data[42] << 8)  |  pkt.data[43];
+        payload.ew = (char)pkt.data[44];
 
-        int16_t alt = (pkt.data[45] << 8) | pkt.data[46];
-        uint8_t sat = pkt.data[47];
+        payload.alt = (pkt.data[45] << 8) | pkt.data[46];
+        payload.sat = pkt.data[47];
 
-        int16_t temp = (pkt.data[48] << 8) | pkt.data[49];
-        int16_t hum  = (pkt.data[50] << 8) | pkt.data[51];
+        payload.temp = (pkt.data[48] << 8) | pkt.data[49];
+        payload.humid    = (pkt.data[50] << 8) | pkt.data[51];
 
-        int16_t press = (pkt.data[52] << 8) | pkt.data[53];
-        int16_t gas   = (pkt.data[54] << 8) | pkt.data[55];
+        payload.press = (pkt.data[52] << 8) | pkt.data[53];
+        payload.gas      = (pkt.data[54] << 8) | pkt.data[55];
 
-        int16_t x = (pkt.data[56] << 8) | pkt.data[57];
-        int16_t y = (pkt.data[58] << 8) | pkt.data[59];
-        int16_t z = (pkt.data[60] << 8) | pkt.data[61];
+        payload.x = (pkt.data[56] << 8) | pkt.data[57];
+        payload.y = (pkt.data[58] << 8) | pkt.data[59];
+        payload.z = (pkt.data[60] << 8) | pkt.data[61];
 
-        int16_t dev_id = (pkt.data[62]);
+        payload.dev_id = (pkt.data[62]);
 
-        // Optionally: process `hash` or log/display it        
-        printk("[TRACKER %d] Time: %02d:%02d:%02d\n", dev_id, hour, minute, second);
-        printk("[TRACKER %d] Lat: %.7f %c | Lon: %.7f %c | Alt: %.1f m | Sats: %d\n", dev_id,
-        lat / 1e7, ns, lon / 1e7, ew, alt / 10.0, sat);
+        struct json_full_packet json_packet = {0};
 
-        printk("[TRACKER %d] Temp: %.2f °C | Hum: %.2f %% | Press: %.1f hPa | Gas: %.2f\n", dev_id,
-        temp / 100.0, hum / 100.0, press / 10.0, gas / 100.0);
+        fill_json_packet_from_tracker_payload(&payload, &json_packet);
+        // print_json_full_packet(&json_packet);
+        encode_and_print_json(&json_packet);
 
-        printk("[TRACKER %d] Accel: X=%.3f Y=%.3f Z=%.3f m/s²\n", dev_id, x / 1000.0, y / 1000.0, z / 1000.0);
-
-
-        // // Print hash (SHA-256 is 32 bytes)
-        // printk("[TRACKER] Hash: ");
-        // for (int i = 0; i < 32; i++) {
-        //     printk("%02X ", hash[i]);
-        // }
-        // printk("\n");
     }
 }
 
@@ -169,16 +163,14 @@ static uint8_t discover_func(struct bt_conn *conn,
     int index = get_conn_index(conn);
 
     if (!attr) {
-        printk("[BASE %d] Characteristic not found\n", index);
+        LOG_ERR("[BASE %d] Characteristic not found", index);
         return BT_GATT_ITER_STOP;
     }
-
-    printk("called1\n");
 
     // Save characteristic handle
     const struct bt_gatt_chrc *gatt_chrc = attr->user_data;
     char_handles[index] = gatt_chrc->value_handle;
-    printk("[BASE %d] Char handle: 0x%04x\n", index, char_handles[index]);
+    LOG_INF("[BASE %d] Char handle: 0x%04x", index, char_handles[index]);
 
     // Now that characteristic is found, start CCCD descriptor discovery
     cccd_discover_params[index].uuid = &conn_characteristic_uuid.uuid;
@@ -189,7 +181,7 @@ static uint8_t discover_func(struct bt_conn *conn,
 
     int err = bt_gatt_discover(conn, &cccd_discover_params[index]);
     if (err) {
-        printk("[BASE %d] CCCD discover failed (%d)\n", index, err);
+        LOG_ERR("[BASE %d] CCCD discover failed (%d)", index, err);
     }
 
     return BT_GATT_ITER_STOP;  // stop after finding the characteristic
@@ -200,17 +192,16 @@ static uint8_t discover_func(struct bt_conn *conn,
 static uint8_t cccd_discover_func(struct bt_conn *conn,
                                   const struct bt_gatt_attr *attr,
                                   struct bt_gatt_discover_params *params) {
-    printk("called\n");
     
     int index = get_conn_index(conn);
 
     if (!attr) {
-        printk("[BASE %d] CCCD not found\n", index);
+        LOG_ERR("[BASE %d] CCCD not found", index);
         return BT_GATT_ITER_STOP;
     }
 
     ccc_handles[index] = attr->handle;
-    printk("[BASE %d] CCCD handle: 0x%04x\n", index, ccc_handles[index]);
+    LOG_INF("[BASE %d] CCCD handle: 0x%04x", index, ccc_handles[index]);
 
     // Setup subscription params
     subs[index].ccc_handle = ccc_handles[index];
@@ -220,9 +211,9 @@ static uint8_t cccd_discover_func(struct bt_conn *conn,
 
     int err = bt_gatt_subscribe(conn, &subs[index]);
     if (err) {
-        printk("[BASE %d] Subscribe failed (%d)\n", index, err);
+        LOG_ERR("[BASE %d] Subscribe failed (%d)", index, err);
     } else {
-        printk("[BASE %d] Subscribed to notifications\n", index);
+        LOG_INF("[BASE %d] Subscribed to notifications", index);
     }
 
     return BT_GATT_ITER_STOP;
@@ -239,17 +230,17 @@ static void discover_tracker_characteristic(struct bt_conn *conn, int index)
 
     int err = bt_gatt_discover(conn, &discover_params[index]);
     if (err) {
-        printk("[BASE %d] Discover characteristic failed (%d)\n", index, err);
+        LOG_ERR("[BASE %d] Discover characteristic failed (%d)", index, err);
     }
 }
 
 void exchange_func(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_params *params)
 {
     if (err) {
-        printk("MTU exchange failed (err %u)\n", err);
+        LOG_ERR("MTU exchange failed (err %u)", err);
     } else {
         uint16_t mtu = bt_gatt_get_mtu(conn);
-        printk("MTU exchanged successfully: %d\n", mtu);
+        LOG_INF("MTU exchanged successfully: %d", mtu);
     }
 }
 
@@ -262,7 +253,7 @@ static void connected(struct bt_conn *conn, uint8_t err) {
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
     if (err) {
-        printk("[BASE] Failed to connect to %s (err %u)\n", addr, err);
+        LOG_ERR("[BASE] Failed to connect to %s (err %u)", addr, err);
         bt_conn_unref(conn);
         start_scan();
         return;
@@ -270,13 +261,13 @@ static void connected(struct bt_conn *conn, uint8_t err) {
 
     int index = get_conn_index(conn);
     if (index < 0) {
-        printk("[BASE] No free conn slots\n");
+        LOG_INF("[BASE] No free conn slots");
         bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
         start_scan();
         return;
     }
 
-    printk("[BASE] Connected [%d]: %s\n", index, addr);
+    LOG_INF("[BASE] Connected [%d]: %s", index, addr);
 
     // Exchange the MTU
     bt_gatt_exchange_mtu(conn, &mtu_params);
@@ -288,7 +279,7 @@ static void connected(struct bt_conn *conn, uint8_t err) {
 
 static void disconnected(struct bt_conn *conn, uint8_t reason) {
     int index = get_conn_index(conn);
-    printk("[BASE] Disconnected [%d] (reason 0x%02x)\n", index, reason);
+    LOG_INF("[BASE] Disconnected [%d] (reason 0x%02x)", index, reason);
 
     if (index >= 0) {
         bt_conn_unref(conns[index]);
@@ -330,14 +321,14 @@ static void device_found(const bt_addr_le_t *addr, int8_t rssi, uint8_t type,
 
     char addr_str[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(addr, addr_str, sizeof(addr_str));
-    printk("[BASE] Found tracker: %s (RSSI %d)\n", addr_str, rssi);
+    LOG_INF("[BASE] Found tracker: %s (RSSI %d)", addr_str, rssi);
     
     bt_le_scan_stop();
     conns[index_available] = NULL;
     int err = bt_conn_le_create(addr, BT_CONN_LE_CREATE_CONN,
                                 BT_LE_CONN_PARAM_DEFAULT, &conns[index_available]);
     if (err) {
-        printk("[BASE] Failed to connect (%d)\n", err);
+        LOG_ERR("[BASE] Failed to connect (%d)", err);
         start_scan();
     }
 }
@@ -352,67 +343,22 @@ static void start_scan(void) {
 
     int err = bt_le_scan_start(&scan_params, device_found);
     if (err) {
-        printk("[BASE] Scan failed to start (%d)\n", err);
+        LOG_ERR("[BASE] Scan failed to start (%d)", err);
     } else {
-        printk("[BASE] Scanning for tracker...\n");
+        LOG_INF("[BASE] Scanning for tracker...");
     }
 }
 
 void base_thread(void) {
     int err = bt_enable(NULL);
     if (err) {
-        printk("[BASE] Bluetooth init failed (err %d)\n", err);
+        LOG_ERR("[BASE] Bluetooth init failed (err %d)", err);
         return;
     }
 
-    printk("[BASE] Bluetooth initialized\n");
+    LOG_INF("[BASE] Bluetooth initialized");
 
     bt_conn_cb_register(&conn_callbacks);
 
     start_scan();
 }
-
-
-
-// static struct bt_gatt_discover_params full_disc_params;
-
-// static uint8_t full_discover_func(struct bt_conn *conn,
-//                                    const struct bt_gatt_attr *attr,
-//                                    struct bt_gatt_discover_params *params) {
-//     if (!attr) {
-//         printk("[BASE] Full discovery complete\n");
-//         return BT_GATT_ITER_STOP;
-//     }
-
-//     printk("[BASE] Found attribute: handle 0x%04x, UUID ", attr->handle);
-
-//     if (attr->uuid->type == BT_UUID_TYPE_16) {
-//         printk("0x%04x", BT_UUID_16(attr->uuid)->val);
-//     } else if (attr->uuid->type == BT_UUID_TYPE_128) {
-//         char uuid_str[BT_UUID_STR_LEN];
-//         bt_uuid_to_str(attr->uuid, uuid_str, sizeof(uuid_str));
-//         printk("%s", uuid_str);
-//     } else {
-//         printk("Unknown UUID type");
-//     }
-
-//     printk("\n");
-
-//     return BT_GATT_ITER_CONTINUE;
-// }
-
-// static void start_full_discovery(struct bt_conn *conn) {
-//     memset(&full_disc_params, 0, sizeof(full_disc_params));
-//     full_disc_params.uuid = NULL; // Discover all
-//     full_disc_params.start_handle = 0x0001;
-//     full_disc_params.end_handle = 0xffff;
-//     full_disc_params.type = BT_GATT_DISCOVER_ATTRIBUTE;
-//     full_disc_params.func = full_discover_func;
-
-//     int err = bt_gatt_discover(conn, &full_disc_params);
-//     if (err) {
-//         printk("[BASE] Full discovery failed: %d\n", err);
-//     } else {
-//         printk("[BASE] Starting full attribute discovery\n");
-//     }
-// }
