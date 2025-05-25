@@ -314,6 +314,7 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
         /* BLUETOOTH ADDITIONS*/
         // Sensor data packed into bluetooth packet and base notified to request packet (sending packet)
         pack_sensor_data(&sensors);
+        
         /*--------------------*/
 
     }
@@ -532,7 +533,13 @@ int main(void) {
 
             /* BLUETOOTH ADDITIONS*/
              // Advertising started, ble_tick set on connection (in bluetooth.c file); accessible through get_ble_tick()
-            start_advertising(); 
+            start_advertising();
+            //internally sleeps in stop advertising function
+            k_msleep(3000);
+            //Check that conncetion isn't established
+            if (!get_ble_tick()){
+                stop_advertising();
+            }
             /*--------------------*/
             read_loop(flash_dev, write_block_size);
             

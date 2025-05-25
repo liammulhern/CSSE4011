@@ -12,3 +12,6 @@ west build -b thingy52/nrf52832  ~/csse4011/repo-project/project/gateway/gateway
 
 
 west build -b nrf52840dk/nrf52840 ~/csse4011/repo-project/project/gateway/gateway-uart --pristine
+
+
+west build -b esp32c3_devkitm ~/csse4011/repo-project/project/gateway/gateway-uart --pristine
