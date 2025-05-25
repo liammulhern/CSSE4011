@@ -33,8 +33,7 @@ void generate_uuid(char *uuid_str, size_t len) {
 }
 
 // void print_json_full_packet(const struct json_full_packet *packet)
-extern void print_json_full_packet(const struct json_full_packet *packet)
-{
+extern void print_json_full_packet(const struct json_full_packet *packet) {
     printk("Header:\n");
     printk("  messageId: %s\n", packet->header.messageId);
     printk("  gatewayId: %s\n", packet->header.gatewayId);
@@ -70,8 +69,7 @@ extern void print_json_full_packet(const struct json_full_packet *packet)
     printk("  value: %s\n", packet->signature.value);
 }
 
-extern void fill_json_packet_from_tracker_payload(const tracker_payload_t *payload, struct json_full_packet *packet)
-{
+extern void fill_json_packet_from_tracker_payload(const tracker_payload_t *payload, struct json_full_packet *packet) {
     // Format strings from payload
     snprintf(packet->payload.deviceId, sizeof(packet->payload.deviceId), "dev-%d", payload->dev_id);
 
@@ -94,14 +92,14 @@ extern void fill_json_packet_from_tracker_payload(const tracker_payload_t *paylo
         return;
     }
 
-    // Print time in desired format: YYYY-MM-DDTHH:MM:SS
-    printk("Decoded time: %04d-%02d-%02dT%02d:%02d:%02d\n",
-        timeinfo.tm_year + 1900,
-        timeinfo.tm_mon + 1,
-        timeinfo.tm_mday,
-        timeinfo.tm_hour,
-        timeinfo.tm_min,
-        timeinfo.tm_sec);
+    // // Print time in desired format: YYYY-MM-DDTHH:MM:SS
+    // printk("Decoded time: %04d-%02d-%02dT%02d:%02d:%02d\n",
+    //     timeinfo.tm_year + 1900,
+    //     timeinfo.tm_mon + 1,
+    //     timeinfo.tm_mday,
+    //     timeinfo.tm_hour,
+    //     timeinfo.tm_min,
+    //     timeinfo.tm_sec);
 
     // Location
     snprintf(packet->payload.location.latitude, sizeof(packet->payload.location.latitude), "%.7f", payload->lat / 1e7);
@@ -150,8 +148,7 @@ extern void fill_json_packet_from_tracker_payload(const tracker_payload_t *paylo
     packet->signature.value[64] = '\0';
 }
 
-extern void encode_and_print_json(const struct json_full_packet *packet)
-{
+extern void encode_and_print_json(const struct json_full_packet *packet) {
     char json_output[JSON_BUFFER_SIZE];
 
     int ret = snprintf(json_output, sizeof(json_output),

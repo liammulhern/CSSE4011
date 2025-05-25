@@ -44,7 +44,7 @@ struct sensor_packet_t {
     uint8_t data[68];
 };
 
-#define MSGQ_MAX_MSGS 10  // adjust if needed
+#define MSGQ_MAX_MSGS 100  // adjust if needed
 K_MSGQ_DEFINE(sensor_msgq, sizeof(struct sensor_packet_t), MSGQ_MAX_MSGS, 4);
 
 /** FUNCTION PROTOTYPES*/

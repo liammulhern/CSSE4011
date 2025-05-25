@@ -281,6 +281,7 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
         /* BLUETOOTH ADDITIONS*/
         // Sensor data packed into bluetooth packet and base notified to request packet (sending packet)
         pack_sensor_data(&sensors);
+        
         /*--------------------*/
 
     }

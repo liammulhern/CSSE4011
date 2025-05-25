@@ -165,7 +165,7 @@ static const char JSON_FORMAT[] =
             "\"ns\":\"%s\","
             "\"longitude\":\"%s\","
             "\"ew\":\"%s\","
-            "\"altitude_m\":\"%s\","
+            "\"altitude_m\":\"%s\""
         "},"
         "\"environment\":{"
             "\"temperature_c\":\"%s\","
