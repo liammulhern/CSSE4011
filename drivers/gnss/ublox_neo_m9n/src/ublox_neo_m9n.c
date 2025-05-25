@@ -243,10 +243,10 @@ static enum message_id get_message_id(const char *buffer, bool strict)
 
 static float to_degrees(float deg_min)
 {
-    float degrees = (int)(deg_min / 100.0);
-    float minutes = deg_min - (100.0 * degrees);
+    float degrees = (int)(deg_min / 100.0F);
+    float minutes = deg_min - (100.0F * degrees);
 
-    return (degrees + (minutes / 60.0));
+    return (degrees + (minutes / 60.0F));
 }
 
 void neom9n_parse_gga(const struct device *dev, char *fields[20])
@@ -371,7 +371,7 @@ void neom9n_parse_zda(const struct device *dev, char *fields[10])
         .tm_min  = data->time.min,
         .tm_sec  = data->time.sec,
     };
-    data->timestamp = timeutil_timegm32(&dt);
+    data->timestamp = timeutil_timegm(&dt);
 }
 
 static int neom9n_parse_data(const struct device *dev)

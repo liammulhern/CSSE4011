@@ -49,7 +49,7 @@ static const gpio_pin_t rgb_pins[] = {
 const struct device *sx1509b_dev;
 
 #define ALARM_CHANNEL_ID 0
-#define UPDATE 10000000// Update window (interrupts)
+#define UPDATE 10// Update window (interrupts)
 #define SAMPLE_RATE 500 // Time between samples grabbed in a row while awake
 #define X_THRESHOLD 2
 #define Y_THRESHOLD 2
@@ -70,6 +70,7 @@ int ble_tick = 0;
 
 struct sensor_blk {
     uint32_t time;
+    int64_t uptime;
     float lat;
     char ns;
     float lon;
@@ -101,7 +102,7 @@ void rtc_interrupt(const struct device *dev, void *user_data) {
 }
 
 void init_rtc(void) {
-    ctr_top.ticks = counter_us_to_ticks(rtc_2, UPDATE);
+    ctr_top.ticks = counter_us_to_ticks(rtc_2, UPDATE * USEC_PER_SEC);
     ctr_top.user_data = &ctr_top;
     ctr_top.callback = rtc_interrupt;
     ctr_top.flags = 0;
@@ -180,15 +181,14 @@ int read_gnss(uint32_t *time,
     neo_api->get_satellites(neo_dev, sat);
 
     if (*sat == 0) {
-        LOG_WRN("Gnss data invalid.\n");
         return -EINVAL;
     }
     return 0;
 }
 
 
-int read_sensors(int32_t *temp, int32_t *hum, int32_t *press, 
-    int32_t *gas, int32_t *x_accel, int32_t *y_accel, int32_t *z_accel) {
+int read_sensors(int16_t *temp, int16_t *hum, int16_t *press, 
+    int16_t *gas, int16_t *x_accel, int16_t *y_accel, int16_t *z_accel) {
     
     struct sensor_value gas_raw;
     struct sensor_value temp_raw;
@@ -268,16 +268,13 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
     offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + (read_size * sizeof(struct sensor_blk));
     // Unpacks data since last bluetooth grab
     // Im blue dabadeebadubah
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_MAX);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
     for (int i = read_size; i < size; i++) {
 
         // read out single struct of data
         flash_read(flash_dev, offset, &sensors, sizeof(sensors));
         offset += sizeof(sensors);
         read_size++;
-        LOG_INF("read: %f     %f      %f       %f        %f       %f        %f\n", 
+        LOG_INF("read: %d     %d      %d       %d        %d       %d        %d\n", 
             sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
         // TODO: send sensors struct over bluetooth
 
@@ -291,15 +288,9 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
     if (flash_write(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size)) {
         LOG_WRN("Read size was not updated!\n");
     }
-
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
-
 }
 
-void write_loop(const struct device *flash_dev, int flag, uint8_t write_block_size) {
-    uint32_t time;
+void write_loop(const struct device *flash_dev, uint8_t write_block_size) {
     struct sensor_blk sensors;
     int sat;
     int err;
@@ -309,9 +300,6 @@ void write_loop(const struct device *flash_dev, int flag, uint8_t write_block_si
     flash_read(flash_dev, TEST_PARTITION_OFFSET, &size, sizeof(uint32_t));
     uint32_t offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors)));
     // Im red like roses
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_MAX);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
     sensors.lat = 1;
     sensors.ns = 1;
     sensors.lon = 1;
@@ -321,31 +309,36 @@ void write_loop(const struct device *flash_dev, int flag, uint8_t write_block_si
     for (int i = 0; i < MAX_SAMPLES; i++) {
         // Sleep for some time before grabbing more data
         k_msleep(SAMPLE_RATE);
-read_data:
         err = read_sensors(&(sensors.temp), &(sensors.hum), &(sensors.press), &(sensors.gas), &(sensors.x_accel), &(sensors.y_accel), &(sensors.z_accel));
         if (err) {
             LOG_WRN("Sensor readings invalid.\n");
+            sensors.temp = 0;
+            sensors.hum = 0;
+            sensors.press = 0;
+            sensors.gas = 0;
+            sensors.x_accel = 0;
+            sensors.y_accel = 0;
+            sensors.z_accel = 0;
         }
-        err |= read_gnss(&time, &(sensors.lat), &(sensors.ns), &(sensors.lon), &(sensors.ew), &(sensors.alt), &sat);
+read_data:
+        err |= read_gnss(&(sensors.time), &(sensors.lat), &(sensors.ns), &(sensors.lon), &(sensors.ew), &(sensors.alt), &sat);
         if (err) {
             retry++;
             if (retry > 5) {
                 // Attempted to gather data several times and was unsuccesful
-                LOG_WRN("Too many incorrect attempts at reading sensors, skipping loop.\n");
-                continue;
+                LOG_WRN("Too many incorrect attempts at reading gnss.\n");
+                sensors.lat = 0;
+                sensors.lon = 0;
+                sensors.alt = 0;
+                sensors.time = 0;
+            } else {
+                goto read_data;
             }
-            goto read_data;
         }
-        // sensors.hour = neotime.hour;
-        // sensors.minute = neotime.min;
-        // sensors.second = neotime.sec;
-        if (flag) {
-            sensors.x_accel = 255;
-            sensors.y_accel = 255;
-            sensors.z_accel = 255;
-        }
+
+        sensors.uptime = k_uptime_get();
         memcpy(&byte_array, &(sensors), sizeof(sensors));
-        LOG_INF("write: %f     %f      %f       %f        %f       %f        %f\n", 
+        LOG_INF("write: %d     %d      %d       %d        %d       %d        %d\n", 
             sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
         for (int j = 0; j < write_cycles; j++) {
             offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors))) + j * write_block_size;
@@ -362,22 +355,8 @@ read_data:
     if (flash_write(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size)) {
         LOG_WRN("Last read offset was not updated!\n");
     }
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
     return;
 }
-
-void led_flash(int32_t time) {
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_MAX);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_MAX);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_MAX);
-    k_msleep(time);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
-    sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
-}
-
 
 static void accel_handler(const struct device *dev, const struct sensor_trigger *trig)
 {
@@ -454,7 +433,6 @@ int main(void) {
                             &odr);
     err = sensor_trigger_set(accel, &trig, accel_handler);
 
-    int flag;
     uint32_t size = 0;
     uint32_t read_size = 0;
     LOG_INF( "%u\n", sizeof(struct sensor_blk));
@@ -462,37 +440,58 @@ int main(void) {
     flash_write(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size);
     flash_write(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size);
     rtc_tick = 1;
+
+    // Accuatoor: red on rtc, green on accel, blue on ble
     while(1) {  
         // Loop occurs on every wakeup from idle or after every occurance
         if (rtc_tick) {
             // Woke from rtc
-            flag = 0;
-            write_loop(flash_dev, flag, write_block_size);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_MAX);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
+  
+            write_loop(flash_dev, write_block_size);
             rtc_tick = 0;
             read_loop(flash_dev, write_block_size);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
             // TODO: LAST THING TO DO!!! check GPS coords is close to a base node.
 
             // TODO: Start advertising and set ble_tick
 
         } else if (accel_tick) {
             // Woke from accel
-            flag = 1;
-            write_loop(flash_dev, flag, write_block_size);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_MAX);
+            write_loop(flash_dev, write_block_size);
             accel_tick = 0;
+            sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
         } 
         if (ble_tick) {
             // TODO: Woke from BLE
+            sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_MAX);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
             read_loop(flash_dev, write_block_size);
             ble_tick = 0;
+            sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
+            sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
             // TODO: Stop advertising and disconnect. 
         }
         LOG_INF("Napping... zzz...\n");
         // epilepsy check begin shutdown process
-        int32_t time_flashing = 1000; 
-        for (int j = 1; j < 4; j++) {
-            led_flash(time_flashing / j);
-        }
-        
+        sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_MAX);
+        sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_MAX);
+        sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_MAX);
+        k_msleep(1000);
+        sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
+        sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
+        sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
         while (!rtc_tick && !accel_tick && !ble_tick) {
             k_cpu_idle(); // truly idle CPU while waiting
         }

@@ -124,6 +124,7 @@ typedef void (*neom9n_api_get_longitude)(const struct device *dev, float *longit
 typedef void (*neom9n_api_get_ew)(const struct device *dev, char *ew);
 typedef void (*neom9n_api_get_altitude)(const struct device *dev, float *altitude);
 typedef void (*neom9n_api_get_satellites)(const struct device *dev, int *satellites);
+typedef void (*neom9n_api_get_timestamp)(const struct device *dev, uint32_t *timestamp);
 
 __subsystem struct neom9n_api {
     neom9n_api_fetch_data fetch_data;
@@ -133,6 +134,7 @@ __subsystem struct neom9n_api {
     neom9n_api_cfg_msg cfg_msg;
 
     neom9n_api_get_time get_time;
+    neom9n_api_get_timestamp get_timestamp;
     neom9n_api_get_latitude get_latitude;
     neom9n_api_get_ns get_ns;
     neom9n_api_get_longitude get_longitude;
