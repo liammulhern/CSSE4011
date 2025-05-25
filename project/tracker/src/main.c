@@ -69,21 +69,19 @@ int accel_tick = 0;
 int ble_tick = 0;
 
 struct sensor_blk {
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t second;
+    uint32_t time;
     float lat;
     char ns;
     float lon;
     char ew;
     float alt;
-    double temp;
-    double hum;
-    double press;
-    double gas;
-    double x_accel; 
-    double y_accel;
-    double z_accel;
+    int16_t temp;
+    int16_t hum;
+    int16_t press;
+    int16_t gas;
+    int16_t x_accel; 
+    int16_t y_accel;
+    int16_t z_accel;
 };
 
 
@@ -166,25 +164,31 @@ int init_gnss(void) {
     return 0;
 }
 
-void read_gnss(struct time *neotime, 
+int read_gnss(uint32_t *time, 
     float* lat, char *ns, float *lon, char *ew, float *alt, int *sat) {
     int rc = neo_api->fetch_data(neo_dev);
     if (rc) {
-        LOG_WRN("error fetching gnss data\n");
-        return;
+        LOG_WRN("error fetching gnss data.\n");
+        return -rc;
     }
-    neo_api->get_time(neo_dev, neotime);
+    neo_api->get_timestamp(neo_dev, time);
     neo_api->get_latitude(neo_dev, lat);
     neo_api->get_ns(neo_dev, ns);
     neo_api->get_longitude(neo_dev, lon);
     neo_api->get_ew(neo_dev, ew);
     neo_api->get_altitude(neo_dev, alt);
     neo_api->get_satellites(neo_dev, sat);
+
+    if (*sat == 0) {
+        LOG_WRN("Gnss data invalid.\n");
+        return -EINVAL;
+    }
+    return 0;
 }
 
 
-int read_sensors(double *temp, double *hum, double *press, 
-    double *gas, double *x_accel, double *y_accel, double *z_accel) {
+int read_sensors(int32_t *temp, int32_t *hum, int32_t *press, 
+    int32_t *gas, int32_t *x_accel, int32_t *y_accel, int32_t *z_accel) {
     
     struct sensor_value gas_raw;
     struct sensor_value temp_raw;
@@ -193,7 +197,6 @@ int read_sensors(double *temp, double *hum, double *press,
     struct sensor_value x_raw;
     struct sensor_value y_raw;
     struct sensor_value z_raw;
-
     if (sensor_sample_fetch(humidity) < 0) {
         // Sample update error
         return -EIO;
@@ -234,13 +237,21 @@ int read_sensors(double *temp, double *hum, double *press,
         return -EIO;
     }
 
-    *x_accel = sensor_value_to_double(&x_raw);
-    *y_accel = sensor_value_to_double(&y_raw);
-    *z_accel = sensor_value_to_double(&z_raw);
-    *hum = sensor_value_to_double(&hum_raw);
-    *temp = sensor_value_to_double(&temp_raw);
-    *press = sensor_value_to_double(&pressure_raw);
-    *gas = sensor_value_to_double(&gas_raw);
+    double temp_x_accel = sensor_value_to_double(&x_raw);
+    double temp_y_accel = sensor_value_to_double(&y_raw);
+    double temp_z_accel = sensor_value_to_double(&z_raw);
+    double temp_hum = sensor_value_to_double(&hum_raw);
+    double temp_temp = sensor_value_to_double(&temp_raw);
+    double temp_press = sensor_value_to_double(&pressure_raw);
+    double temp_gas = sensor_value_to_double(&gas_raw);
+
+    *temp = (int16_t)(temp_temp * 100);
+    *hum = (int16_t)(temp_hum * 100);
+    *press = (int16_t)(temp_press * 10);
+    *gas = (int16_t)(temp_gas * 100);
+    *x_accel = (int16_t)(temp_x_accel * 1000.0);
+    *y_accel = (int16_t)(temp_y_accel * 1000.0);
+    *z_accel = (int16_t)(temp_z_accel * 1000.0);
  
     return 0;
 }
@@ -250,11 +261,11 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
     // Triggered from bluetooth wakeup
     uint8_t size = 0;
      uint32_t read_size = 0;
-    uint32_t offset = 2 * FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET;
+    uint32_t offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET;
     flash_read(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size);
     flash_read(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size);
     struct sensor_blk sensors;
-    offset = 2 * FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + (read_size * sizeof(struct sensor_blk));
+    offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + (read_size * sizeof(struct sensor_blk));
     // Unpacks data since last bluetooth grab
     // Im blue dabadeebadubah
     sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
@@ -269,7 +280,7 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
         LOG_INF("read: %f     %f      %f       %f        %f       %f        %f\n", 
             sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
         // TODO: send sensors struct over bluetooth
-        
+
     }
 
     //set the new "latest read offset"
@@ -288,51 +299,56 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
 }
 
 void write_loop(const struct device *flash_dev, int flag, uint8_t write_block_size) {
-    struct time neotime;
+    uint32_t time;
     struct sensor_blk sensors;
     int sat;
     int err;
     uint32_t size = 0;
+    uint8_t byte_array[sizeof(struct sensor_blk)];
+    uint8_t write_cycles = sizeof(sensors) / write_block_size;
     flash_read(flash_dev, TEST_PARTITION_OFFSET, &size, sizeof(uint32_t));
-    uint32_t offset =  2 * FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors)));
+    uint32_t offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors)));
     // Im red like roses
     sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_MAX);
     sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
     sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
-    sensors.hour = 1;
-    sensors.minute = 1;
-    sensors.second = 1;
     sensors.lat = 1;
     sensors.ns = 1;
     sensors.lon = 1;
     sensors.ew = 1;
     sensors.alt = 1;
+    uint8_t retry = 0;
     for (int i = 0; i < MAX_SAMPLES; i++) {
         // Sleep for some time before grabbing more data
         k_msleep(SAMPLE_RATE);
-        //read_gnss(&neotime, &(sensors.lat), &(sensors.ns), &(sensors.lon), &(sensors.ew), &(sensors.alt), &sat);
-        uint8_t byte_array[sizeof(struct sensor_blk)];
+read_data:
         err = read_sensors(&(sensors.temp), &(sensors.hum), &(sensors.press), &(sensors.gas), &(sensors.x_accel), &(sensors.y_accel), &(sensors.z_accel));
         if (err) {
             LOG_WRN("Sensor readings invalid.\n");
-            continue;
         }
-        //sensors.hour = neotime.hour;
-        //sensors.minute = neotime.min;
-        //sensors.second = neotime.sec;
+        err |= read_gnss(&time, &(sensors.lat), &(sensors.ns), &(sensors.lon), &(sensors.ew), &(sensors.alt), &sat);
+        if (err) {
+            retry++;
+            if (retry > 5) {
+                // Attempted to gather data several times and was unsuccesful
+                LOG_WRN("Too many incorrect attempts at reading sensors, skipping loop.\n");
+                continue;
+            }
+            goto read_data;
+        }
+        // sensors.hour = neotime.hour;
+        // sensors.minute = neotime.min;
+        // sensors.second = neotime.sec;
         if (flag) {
             sensors.x_accel = 255;
             sensors.y_accel = 255;
             sensors.z_accel = 255;
         }
         memcpy(&byte_array, &(sensors), sizeof(sensors));
-        uint8_t write_cycles = sizeof(sensors) / write_block_size;
-        struct sensor_blk sensor_dum;
-        uint8_t byte_arr2[sizeof(struct sensor_blk)];
-        LOG_INF("og: %f     %f      %f       %f        %f       %f        %f\n", 
+        LOG_INF("write: %f     %f      %f       %f        %f       %f        %f\n", 
             sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
         for (int j = 0; j < write_cycles; j++) {
-            offset = 2 * FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors))) + j * write_block_size;
+            offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors))) + j * write_block_size;
             flash_write(flash_dev, offset, &byte_array[j * write_block_size], write_block_size);
         }
         size++;
@@ -416,7 +432,7 @@ int main(void) {
     evoc = DEVICE_DT_GET_ONE(ams_ccs811);
     accel = DEVICE_DT_GET(DT_ALIAS(accel0));
     err = init_sensors();
-    //err |= init_gnss();
+    err |= init_gnss();
     if (err) {
         LOG_WRN("error setting up devices. Shutting down.\n");
         return err;
@@ -442,11 +458,10 @@ int main(void) {
     uint32_t size = 0;
     uint32_t read_size = 0;
     LOG_INF( "%u\n", sizeof(struct sensor_blk));
-    flash_erase(flash_dev, TEST_PARTITION_OFFSET, FLASH_PAGE_SIZE * 4);
+    flash_erase(flash_dev, TEST_PARTITION_OFFSET, FLASH_PAGE_SIZE * 6);
     flash_write(flash_dev, TEST_PARTITION_OFFSET, &size, write_block_size);
     flash_write(flash_dev, TEST_PARTITION_OFFSET + write_block_size, &read_size, write_block_size);
     rtc_tick = 1;
-    int k = 0;
     while(1) {  
         // Loop occurs on every wakeup from idle or after every occurance
         if (rtc_tick) {
@@ -455,16 +470,21 @@ int main(void) {
             write_loop(flash_dev, flag, write_block_size);
             rtc_tick = 0;
             read_loop(flash_dev, write_block_size);
+            // TODO: LAST THING TO DO!!! check GPS coords is close to a base node.
+
+            // TODO: Start advertising and set ble_tick
+
         } else if (accel_tick) {
             // Woke from accel
             flag = 1;
             write_loop(flash_dev, flag, write_block_size);
-            //init_accel_trig(accel ,true);
             accel_tick = 0;
-        } else if (ble_tick) {
+        } 
+        if (ble_tick) {
             // TODO: Woke from BLE
             read_loop(flash_dev, write_block_size);
             ble_tick = 0;
+            // TODO: Stop advertising and disconnect. 
         }
         LOG_INF("Napping... zzz...\n");
         // epilepsy check begin shutdown process
