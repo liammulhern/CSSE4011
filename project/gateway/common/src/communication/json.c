@@ -7,7 +7,8 @@
 
 #include <zephyr/logging/log.h>
 #include <zephyr/logging/log_ctrl.h>
-
+#include <zephyr/sys/timeutil.h>
+#include <time.h>
 #include <zephyr/sys/uuid.h> 
 
 LOG_MODULE_REGISTER(json_module);
@@ -37,13 +38,12 @@ extern void print_json_full_packet(const struct json_full_packet *packet)
     printk("Header:\n");
     printk("  messageId: %s\n", packet->header.messageId);
     printk("  gatewayId: %s\n", packet->header.gatewayId);
-    printk("  timestamp: %s\n", packet->header.timestamp);
     printk("  schemaVersion: %s\n", packet->header.schemaVersion);
     printk("  messageType: %s\n", packet->header.messageType);
 
     printk("Payload:\n");
     printk("  deviceId: %s\n", packet->payload.deviceId);
-    printk("  time: %s\n", packet->payload.time);
+    printk("  time: %s\n", packet->payload.timestamp);
 
     printk("  Location:\n");
     printk("    latitude: %s\n", packet->payload.location.latitude);
@@ -74,7 +74,34 @@ extern void fill_json_packet_from_tracker_payload(const tracker_payload_t *paylo
 {
     // Format strings from payload
     snprintf(packet->payload.deviceId, sizeof(packet->payload.deviceId), "dev-%d", payload->dev_id);
-    snprintf(packet->payload.time, sizeof(packet->payload.time), "%02d:%02d:%02d", payload->hour, payload->minute, payload->second);
+
+    // //Decode unix timestamp
+    // struct tm decoded;
+    // timeutil_timegm(payload->timestamp, &decoded);
+
+    // printk("Decoded time: %04d-%02d-%02dT%02d:%02d:%02d\n",
+    //        decoded.tm_year + 1900, decoded.tm_mon + 1, decoded.tm_mday,
+    //        decoded.tm_hour, decoded.tm_min, decoded.tm_sec);
+    // }
+
+    time_t raw_time = (time_t)payload->timestamp;
+    struct tm timeinfo;
+
+    // Convert Unix timestamp to broken-down UTC time (GMT)
+    // Use gmtime_r for thread safety, or gmtime if not available
+    if (gmtime_r(&raw_time, &timeinfo) == NULL) {
+        printk("Failed to convert timestamp\n");
+        return;
+    }
+
+    // Print time in desired format: YYYY-MM-DDTHH:MM:SS
+    printk("Decoded time: %04d-%02d-%02dT%02d:%02d:%02d\n",
+        timeinfo.tm_year + 1900,
+        timeinfo.tm_mon + 1,
+        timeinfo.tm_mday,
+        timeinfo.tm_hour,
+        timeinfo.tm_min,
+        timeinfo.tm_sec);
 
     // Location
     snprintf(packet->payload.location.latitude, sizeof(packet->payload.location.latitude), "%.7f", payload->lat / 1e7);
@@ -102,7 +129,12 @@ extern void fill_json_packet_from_tracker_payload(const tracker_payload_t *paylo
     // Header (dummy values)
     strncpy(packet->header.messageId, uuid_str, sizeof(packet->header.messageId));
     strncpy(packet->header.gatewayId, "GW-01", sizeof(packet->header.gatewayId));
-    snprintf(packet->header.timestamp, sizeof(packet->header.timestamp), "%02d:%02d:%02d", payload->hour, payload->minute, payload->second); //PROBABLy needs to be update to date time string (change board or board on might have it)
+    snprintf(packet->payload.timestamp, sizeof(packet->payload.timestamp), "%04d-%02d-%02dT%02d:%02d:%02d", timeinfo.tm_year + 1900,
+        timeinfo.tm_mon + 1,
+        timeinfo.tm_mday,
+        timeinfo.tm_hour,
+        timeinfo.tm_min,
+        timeinfo.tm_sec);
     strncpy(packet->header.schemaVersion, "1.0", sizeof(packet->header.schemaVersion));
     strncpy(packet->header.messageType, "telemetry", sizeof(packet->header.messageType));
 
@@ -124,11 +156,10 @@ extern void encode_and_print_json(const struct json_full_packet *packet)
         JSON_FORMAT,
         packet->header.messageId,
         packet->header.gatewayId,
-        packet->header.timestamp,
         packet->header.schemaVersion,
         packet->header.messageType,
         packet->payload.deviceId,
-        packet->payload.time,
+        packet->payload.timestamp,
         packet->payload.location.latitude,
         packet->payload.location.ns,
         packet->payload.location.longitude,

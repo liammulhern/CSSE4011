@@ -7,6 +7,7 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/hci.h>
+#include <zephyr/sys/timeutil.h>
 
 #include <tinycrypt/sha256.h>
 #include <tinycrypt/constants.h>
@@ -17,7 +18,7 @@
 static struct bt_conn *current_conn;
 static bool notify_enabled = false;  // NEW
 
-#define DEV_ID 1
+#define DEV_ID 2
 
 // Global buffer holding packed sensor data (14 bytes)
 #define PACKED_DATA_LEN 64
@@ -26,19 +27,17 @@ uint8_t packed_data[PACKED_DATA_LEN];
 // THIS WILL BE REMOVED AND INCLUDED IN ACTUAL FILE SET UP
 // -----------------------------------------------------------------
 struct sensor_blk {
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t second;
+    uint32_t timestamp;
     float lat;
     char ns;
     float lon;
     char ew;
     float alt; 
     int sat;
-    double temp;
-    double hum;
-    double press;
-    double gas;
+    int16_t temp;
+    int16_t hum;
+    int16_t press;
+    int16_t gas;
     double x_accel; 
     double y_accel;
     double z_accel;
@@ -165,43 +164,58 @@ struct bt_le_adv_param adv_params = {
 };
 
 static void print_packed_data() {
+    // Unpack timestamp (uint32_t)
+    uint32_t timestamp = (packed_data[32] << 24) |
+                         (packed_data[33] << 16) |
+                         (packed_data[34] << 8) |
+                         packed_data[35];
 
-    // Unpack sensor fields starting from index 32
-    uint8_t hour   = packed_data[32];
-    uint8_t minute = packed_data[33];
-    uint8_t second = packed_data[34];
+    // Latitude (int32_t, packed as degrees * 1e7)
+    int32_t lat = (packed_data[36] << 24) | (packed_data[37] << 16) |
+                  (packed_data[38] << 8)  | packed_data[39];
+    char ns = (char)packed_data[40];
 
-    int32_t lat = (packed_data[35] << 24) | (packed_data[36] << 16) |
-                  (packed_data[37] << 8)  | packed_data[38];
-    char ns = (char)packed_data[39];
+    // Longitude (int32_t, packed as degrees * 1e7)
+    int32_t lon = (packed_data[41] << 24) | (packed_data[42] << 16) |
+                  (packed_data[43] << 8)  | packed_data[44];
+    char ew = (char)packed_data[45];
 
-    int32_t lon = (packed_data[40] << 24) | (packed_data[41] << 16) |
-                  (packed_data[42] << 8)  | packed_data[43];
-    char ew = (char)packed_data[44];
+    // Altitude (int16_t, m * 10)
+    int16_t alt = (packed_data[46] << 8) | packed_data[47];
 
-    int16_t alt = (packed_data[45] << 8) | packed_data[46];
-    uint8_t sat = packed_data[47];
+    // Satellites
+    uint8_t sat = packed_data[48];
 
-    int16_t temp = (packed_data[48] << 8) | packed_data[49];
-    int16_t hum  = (packed_data[50] << 8) | packed_data[51];
+    // Temperature (°C × 100)
+    int16_t temp = (packed_data[49] << 8) | packed_data[50];
 
-    int16_t press = (packed_data[52] << 8) | packed_data[53];
-    int16_t gas   = (packed_data[54] << 8) | packed_data[55];
+    // Humidity (% × 100)
+    int16_t hum  = (packed_data[51] << 8) | packed_data[52];
 
-    int16_t x = (packed_data[56] << 8) | packed_data[57];
-    int16_t y = (packed_data[58] << 8) | packed_data[59];
-    int16_t z = (packed_data[60] << 8) | packed_data[61];
+    // Pressure (hPa × 10)
+    int16_t press = (packed_data[53] << 8) | packed_data[54];
 
-    printk("[TRACKER] Parsed data:\n");
+    // Gas (arbitrary units × 100)
+    int16_t gas = (packed_data[55] << 8) | packed_data[56];
 
-    // Print first 8 bytes of hash as example (SHA-256 is 32 bytes)
+    // Accelerometer X/Y/Z (m/s² × 1000)
+    int16_t x = (packed_data[57] << 8) | packed_data[58];
+    int16_t y = (packed_data[59] << 8) | packed_data[60];
+    int16_t z = (packed_data[61] << 8) | packed_data[62];
+
+    // Device ID (last byte)
+    uint8_t dev_id = packed_data[63];
+
+    // Print SHA-256 hash (bytes 0..31)
     printk("[TRACKER] Hash: ");
     for (int i = 0; i < 32; i++) {
         printk("%02X ", packed_data[i]);
     }
     printk("\n");
 
-    printk("  Time: %02d:%02d:%02d\n", hour, minute, second);
+    // Print unpacked fields
+    printk("[TRACKER] Parsed Data:\n");
+    printk("  Timestamp: %u\n", timestamp);
     printk("  Latitude: %.7f %c\n", lat / 1e7, ns);
     printk("  Longitude: %.7f %c\n", lon / 1e7, ew);
     printk("  Altitude: %.1f m\n", alt / 10.0);
@@ -209,85 +223,83 @@ static void print_packed_data() {
     printk("  Temperature: %.2f °C\n", temp / 100.0);
     printk("  Humidity: %.2f %%\n", hum / 100.0);
     printk("  Pressure: %.1f hPa\n", press / 10.0);
-    printk("  Gas: %.1f units\n", gas / 100.0);
+    printk("  Gas: %.2f units\n", gas / 100.0);
     printk("  Accel X: %.3f m/s²\n", x / 1000.0);
     printk("  Accel Y: %.3f m/s²\n", y / 1000.0);
     printk("  Accel Z: %.3f m/s²\n", z / 1000.0);
+    printk("  Dev ID: %d\n", dev_id);
 }
 
 void pack_sensor_data(const struct sensor_blk *sensor) {
-    // Fill bytes 0..31 with SHA-256 digest of sensor block
-    hash_sensor_blk(sensor, packed_data);  // hash_sensor_blk(sensor, uint8_t *digest)
+    // Fill bytes 0..31 with SHA-256 digest
+    hash_sensor_blk(sensor, packed_data);
 
-    // Bytes 32..61: pack sensor data fields in order, fixing offsets:
+    // Timestamp → bytes 32..35
+    packed_data[32] = (sensor->timestamp >> 24) & 0xFF;
+    packed_data[33] = (sensor->timestamp >> 16) & 0xFF;
+    packed_data[34] = (sensor->timestamp >> 8) & 0xFF;
+    packed_data[35] = sensor->timestamp & 0xFF;
 
-    packed_data[32] = sensor->hour;
-    packed_data[33] = sensor->minute;
-    packed_data[34] = sensor->second;  // fixed index (was 4)
-
-    // Latitude (float → int32: deg * 1e7)
+    // Latitude → bytes 36..39
     int32_t lat_fixed = (int32_t)(sensor->lat * 1e7f);
-    packed_data[35] = (lat_fixed >> 24) & 0xFF;
-    packed_data[36] = (lat_fixed >> 16) & 0xFF;
-    packed_data[37] = (lat_fixed >> 8) & 0xFF;
-    packed_data[38] = lat_fixed & 0xFF;
-    packed_data[39] = sensor->ns;
+    packed_data[36] = (lat_fixed >> 24) & 0xFF;
+    packed_data[37] = (lat_fixed >> 16) & 0xFF;
+    packed_data[38] = (lat_fixed >> 8) & 0xFF;
+    packed_data[39] = lat_fixed & 0xFF;
+    packed_data[40] = sensor->ns;
 
-    // Longitude (float → int32: deg * 1e7)
+    // Longitude → bytes 41..44
     int32_t lon_fixed = (int32_t)(sensor->lon * 1e7f);
-    packed_data[40] = (lon_fixed >> 24) & 0xFF;
-    packed_data[41] = (lon_fixed >> 16) & 0xFF;
-    packed_data[42] = (lon_fixed >> 8) & 0xFF;
-    packed_data[43] = lon_fixed & 0xFF;
-    packed_data[44] = sensor->ew;
+    packed_data[41] = (lon_fixed >> 24) & 0xFF;
+    packed_data[42] = (lon_fixed >> 16) & 0xFF;
+    packed_data[43] = (lon_fixed >> 8) & 0xFF;
+    packed_data[44] = lon_fixed & 0xFF;
+    packed_data[45] = sensor->ew;
 
-    // Altitude (float → int16: m * 10)
+    // Altitude → bytes 46..47
     int16_t alt_fixed = (int16_t)(sensor->alt * 10.0f);
-    packed_data[45] = (alt_fixed >> 8) & 0xFF;
-    packed_data[46] = alt_fixed & 0xFF;
+    packed_data[46] = (alt_fixed >> 8) & 0xFF;
+    packed_data[47] = alt_fixed & 0xFF;
 
-    // Satellites
-    packed_data[47] = (uint8_t)(sensor->sat);
+    // Satellites → byte 48
+    packed_data[48] = (uint8_t)(sensor->sat);
 
-    // Temperature (°C × 100)
-    int16_t temp_fixed = (int16_t)(sensor->temp * 100.0);
-    packed_data[48] = (temp_fixed >> 8) & 0xFF;
-    packed_data[49] = temp_fixed & 0xFF;
+    // Temperature → bytes 49..50
+    int16_t temp_fixed = (int16_t)(sensor->temp);
+    packed_data[49] = (temp_fixed >> 8) & 0xFF;
+    packed_data[50] = temp_fixed & 0xFF;
 
-    // Humidity (% × 100)
-    int16_t hum_fixed = (int16_t)(sensor->hum * 100.0);
-    packed_data[50] = (hum_fixed >> 8) & 0xFF;
-    packed_data[51] = hum_fixed & 0xFF;
+    // Humidity → bytes 51..52
+    int16_t hum_fixed = (int16_t)(sensor->hum);
+    packed_data[51] = (hum_fixed >> 8) & 0xFF;
+    packed_data[52] = hum_fixed & 0xFF;
 
-    // Pressure (hPa × 10)
-    int16_t press_fixed = (int16_t)(sensor->press * 10.0);
-    packed_data[52] = (press_fixed >> 8) & 0xFF;
-    packed_data[53] = press_fixed & 0xFF;
+    // Pressure → bytes 53..54
+    int16_t press_fixed = (int16_t)(sensor->press);
+    packed_data[53] = (press_fixed >> 8) & 0xFF;
+    packed_data[54] = press_fixed & 0xFF;
 
-    // Gas (arbitrary units × 100)
-    int16_t gas_fixed = (int16_t)(sensor->gas * 100);
-    packed_data[54] = (gas_fixed >> 8) & 0xFF;
-    packed_data[55] = gas_fixed & 0xFF;
+    // Gas → bytes 55..56
+    int16_t gas_fixed = (int16_t)(sensor->gas);
+    packed_data[55] = (gas_fixed >> 8) & 0xFF;
+    packed_data[56] = gas_fixed & 0xFF;
 
-    // Accelerometer X/Y/Z (m/s² × 1000)
+    // Accelerometer → bytes 57..62
     int16_t x_fixed = (int16_t)(sensor->x_accel * 1000.0);
     int16_t y_fixed = (int16_t)(sensor->y_accel * 1000.0);
     int16_t z_fixed = (int16_t)(sensor->z_accel * 1000.0);
 
-    packed_data[56] = (x_fixed >> 8) & 0xFF;
-    packed_data[57] = x_fixed & 0xFF;
+    packed_data[57] = (x_fixed >> 8) & 0xFF;
+    packed_data[58] = x_fixed & 0xFF;
+    packed_data[59] = (y_fixed >> 8) & 0xFF;
+    packed_data[60] = y_fixed & 0xFF;
+    packed_data[61] = (z_fixed >> 8) & 0xFF;
+    packed_data[62] = z_fixed & 0xFF;
 
-    packed_data[58] = (y_fixed >> 8) & 0xFF;
-    packed_data[59] = y_fixed & 0xFF;
+    // DEV_ID → byte 63
+    packed_data[63] = DEV_ID & 0xFF;
 
-    packed_data[60] = (z_fixed >> 8) & 0xFF;
-    packed_data[61] = z_fixed & 0xFF;
-
-    // Zero padding bytes 62, 63
-    packed_data[62] = DEV_ID & 0xFF;
-    packed_data[63] = 0;
-
-    // Send notification if enabled and connected
+    // Notify
     if (notify_enabled && current_conn) {
         int err = bt_gatt_notify(current_conn, &custom_svc.attrs[1], packed_data, PACKED_DATA_LEN);
         if (err) {
@@ -322,10 +334,12 @@ int start_advertising(void) {
     }
 
     printk("[TRACKER] Advertising started\n");
+    k_msleep(3000);  // Wait before restarting next advertisement cycle ?????
     return 0;
 }
 
 int stop_advertising(void) {
+    k_msleep(1500); // wait for packets to clear before stopping
     int err;
     printk("[TRACKER] Stopping advertising...\n");
 
@@ -339,6 +353,28 @@ int stop_advertising(void) {
     return 0;
 }
 
+int stop_advertising_and_disconnect(struct bt_conn *conn)
+{
+    int err;
+
+    err = stop_advertising();
+    if (err) {
+        printk("[TRACKER] Failed to stop advertising\n");
+        return err;
+    }
+
+    if (conn) {
+        err = bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+        if (err) {
+            printk("[TRACKER] Disconnection failed (err %d)\n", err);
+            return err;
+        } else {
+            printk("[TRACKER] Disconnection initiated\n");
+        }
+    }
+
+    return 0;
+}
 
 void tracker_thread(void) {
     int err;
@@ -349,126 +385,62 @@ void tracker_thread(void) {
         return;
     }
 
+    struct tm timeinfo = {
+        .tm_year = 2025 - 1900,  // years since 1900
+        .tm_mon = 4,             // May (0-indexed: Jan = 0)
+        .tm_mday = 25,
+        .tm_hour = 12,
+        .tm_min = 38,
+        .tm_sec = 0,
+    };
+
+    uint32_t unix_ts = (uint32_t)timeutil_timegm(&timeinfo);
+    printk("Unix timestamp: %u\n", unix_ts);
+
     // Example sensor data
     struct sensor_blk sensor = {
-        .hour = 12,
-        .minute = 34,
-        .second = 56,
+        .timestamp = unix_ts,
         .lat = 37.7699999f,
         .ns = 'N',
         .lon = -122.419998f,
         .ew = 'W',
         .alt = 12.3f,
         .sat = 7,
-        .temp = 23.50,
-        .hum = 45.67,
-        .press = 1013.2,
-        .gas = 52.3,
+        .temp = 2350, //23.50
+        .hum = 4567, //45.67
+        .press = 10132, //10113.2
+        .gas = 5230, //52.30
         .x_accel = -0.900,
         .y_accel = 0.200,
         .z_accel = 0.985
     };
 
-    uint8_t digest[TC_SHA256_DIGEST_SIZE];
-    hash_sensor_blk(&sensor, digest);
+    // uint8_t digest[TC_SHA256_DIGEST_SIZE];
+    // hash_sensor_blk(&sensor, digest);
 
-    print_sha256_digest(digest);
+    // print_sha256_digest(digest);
 
     while (1) {
         err = start_advertising();
         if (err) {
-            printk("[TRACKER] Advertising failed to start\n");
             return;
         }
-        k_msleep(3000);  // Wait before restarting next advertisement cycle
         // Advertise sensor data 5 times, once per second
         for (int i = 0; i < 5; i++) {
             pack_sensor_data(&sensor);
             print_packed_data();
 
             // Simulate sensor updates
-            sensor.second = (sensor.second + 1) % 60;
             sensor.temp += 0.1;
             sensor.hum += 0.1;
             sensor.press += 0.1;
 
-            // k_msleep(100); 
         }
-        k_msleep(1500); 
-        err = stop_advertising();
+
+        err = stop_advertising_and_disconnect(current_conn);
         if (err) {
-            printk("[TRACKER] Failed to stop advertising\n");
+            return;
         }
-
-        if (current_conn) {
-            err = bt_conn_disconnect(current_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
-            if (err) {
-                printk("[TRACKER] Disconnection failed (err %d)\n", err);
-            } else {
-                printk("[TRACKER] Disconnection initiated\n");
-            }
-        }
-
-        printk("[TRACKER] Sleeping before next cycle...\n");
         k_sleep(K_SECONDS(10));  // Wait before restarting next advertisement cycle
     }
 }
-
-#define TRACKER_CONTROL_STACK_SIZE 2048
-#define TRACKER_CONTROL_PRIORITY 5
-
-
-
-// void tracker_thread(void) {
-
-//     int err;
-
-//     err = init_bluetooth();
-//     if (err) {
-//         return;
-//     }
-    
-//     err = start_advertising();
-//         if (err) {
-//         return;
-//     }
-
-//     // Example sensor data
-//     struct sensor_blk sensor = {
-//         .hour = 12,
-//         .minute = 34,
-//         .second = 56,
-//         .lat = 37.7699999f,
-//         .ns = 'N',
-//         .lon = -122.419998f,
-//         .ew = 'W',
-//         .alt = 12.3f,
-//         .sat = 7,
-//         .temp = 23.50,
-//         .hum = 45.67,
-//         .press = 1013.2,
-//         .gas = 52.3,
-//         .x_accel = -0.900,
-//         .y_accel = 0.200,
-//         .z_accel = 0.985
-//     };
-
-//     // Pack the initial sensor data
-//     pack_sensor_data(&sensor);
-
-//     // Print packed bytes and parsed content
-//     print_packed_data();
-
-//     while (1) {
-//         k_sleep(K_SECONDS(1));
-
-//         // Simulate sensor updates
-//         sensor.second = (sensor.second + 1) % 60;
-//         sensor.temp += 0.1;
-//         sensor.hum += 0.1;
-//         sensor.press += 0.1;
-
-//         // Re-pack updated data
-//         pack_sensor_data(&sensor);
-//     }
-// }

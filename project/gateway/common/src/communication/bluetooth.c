@@ -113,48 +113,69 @@ extern void process_data_thread(void) {
     struct sensor_packet_t pkt;
 
     while (1) {
+        // Wait forever until a sensor packet arrives in the queue
         k_msgq_get(&sensor_msgq, &pkt, K_FOREVER);
 
-        tracker_payload_t payload;
+        tracker_payload_t payload = {0};
 
-        // Copy first 32 bytes into hash array
-        memcpy(payload.hash, pkt.data, 32);  // or manually if avoiding memcpy
+        // Copy first 32 bytes into hash array (manual copy if avoiding memcpy)
+        for (int i = 0; i < 32; i++) {
+            payload.hash[i] = pkt.data[i];
+        }
 
-        payload.hour   = pkt.data[32];
-        payload.minute = pkt.data[33];
-        payload.second = pkt.data[34];
+        // Unpack timestamp (4 bytes, big endian)
+        payload.timestamp = (pkt.data[32] << 24) |
+                             (pkt.data[33] << 16) |
+                             (pkt.data[34] << 8)  |
+                             pkt.data[35];
 
-        payload.lat= (pkt.data[35] << 24) | (pkt.data[36] << 16) |
-                        (pkt.data[37] << 8)  |  pkt.data[38];
-        payload.ns = (char)pkt.data[39];
+        // Latitude (4 bytes, int32_t)
+        payload.lat = (pkt.data[36] << 24) |
+                      (pkt.data[37] << 16) |
+                      (pkt.data[38] << 8)  |
+                      pkt.data[39];
+        payload.ns = (char)pkt.data[40];
 
-        payload.lon = (pkt.data[40] << 24) | (pkt.data[41] << 16) |
-                            (pkt.data[42] << 8)  |  pkt.data[43];
-        payload.ew = (char)pkt.data[44];
+        // Longitude (4 bytes, int32_t)
+        payload.lon = (pkt.data[41] << 24) |
+                      (pkt.data[42] << 16) |
+                      (pkt.data[43] << 8)  |
+                      pkt.data[44];
+        payload.ew = (char)pkt.data[45];
 
-        payload.alt = (pkt.data[45] << 8) | pkt.data[46];
-        payload.sat = pkt.data[47];
+        // Altitude (2 bytes, int16_t)
+        payload.alt = (pkt.data[46] << 8) | pkt.data[47];
 
-        payload.temp = (pkt.data[48] << 8) | pkt.data[49];
-        payload.humid    = (pkt.data[50] << 8) | pkt.data[51];
+        // Satellites (1 byte)
+        payload.sat = pkt.data[48];
 
-        payload.press = (pkt.data[52] << 8) | pkt.data[53];
-        payload.gas      = (pkt.data[54] << 8) | pkt.data[55];
+        // Temperature (2 bytes, int16_t)
+        payload.temp = (pkt.data[49] << 8) | pkt.data[50];
 
-        payload.x = (pkt.data[56] << 8) | pkt.data[57];
-        payload.y = (pkt.data[58] << 8) | pkt.data[59];
-        payload.z = (pkt.data[60] << 8) | pkt.data[61];
+        // Humidity (2 bytes, int16_t)
+        payload.humid = (pkt.data[51] << 8) | pkt.data[52];
 
-        payload.dev_id = (pkt.data[62]);
+        // Pressure (2 bytes, int16_t)
+        payload.press = (pkt.data[53] << 8) | pkt.data[54];
+
+        // Gas (2 bytes, int16_t)
+        payload.gas = (pkt.data[55] << 8) | pkt.data[56];
+
+        // Accelerometer X, Y, Z (2 bytes each, int16_t)
+        payload.x = (pkt.data[57] << 8) | pkt.data[58];
+        payload.y = (pkt.data[59] << 8) | pkt.data[60];
+        payload.z = (pkt.data[61] << 8) | pkt.data[62];
+
+        // Device ID (1 byte)
+        payload.dev_id = pkt.data[63];
 
         struct json_full_packet json_packet = {0};
-
         fill_json_packet_from_tracker_payload(&payload, &json_packet);
-        // print_json_full_packet(&json_packet);
+        //print_json_full_packet(&json_packet);
         encode_and_print_json(&json_packet);
-
     }
 }
+
 
 // Step 1: Discover characteristic
 static uint8_t discover_func(struct bt_conn *conn,
@@ -247,6 +268,30 @@ void exchange_func(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchange_pa
 struct bt_gatt_exchange_params mtu_params = {
     .func = exchange_func,
 };
+
+int stop_advertising_and_disconnect(struct bt_conn *conn)
+{
+    int err;
+
+    err = stop_advertising();
+    if (err) {
+        printk("[TRACKER] Failed to stop advertising\n");
+        return err;
+    }
+
+    if (conn) {
+        err = bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+        if (err) {
+            printk("[TRACKER] Disconnection failed (err %d)\n", err);
+            return err;
+        } else {
+            printk("[TRACKER] Disconnection initiated\n");
+        }
+    }
+
+    return 0;
+}
+
 
 static void connected(struct bt_conn *conn, uint8_t err) {
     char addr[BT_ADDR_LE_STR_LEN];

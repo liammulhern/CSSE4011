@@ -8,9 +8,7 @@
 #define JSON_BUFFER_SIZE 1024
 
 typedef struct {
-    uint8_t hour;
-    uint8_t minute;
-    uint8_t second;
+    uint32_t timestamp;
 
     int32_t lat;
     char ns;
@@ -66,7 +64,7 @@ struct json_payload_acceleration {
 // Payload block
 struct json_payload {
     char deviceId[20];
-    char time[20];
+    char timestamp[72];
     struct json_payload_location location;
     struct json_payload_environment environment;
     struct json_payload_acceleration acceleration;
@@ -76,7 +74,6 @@ struct json_payload {
 struct json_header {
     char messageId[40];
     char gatewayId[12];
-    char timestamp[32];
     char schemaVersion[8];
     char messageType[12];
 };
@@ -123,7 +120,7 @@ static const struct json_obj_descr json_accel_descr[] = {
 // Payload
 static const struct json_obj_descr json_payload_descr[] = {
     JSON_OBJ_DESCR_PRIM(struct json_payload, deviceId, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_PRIM(struct json_payload, time, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(struct json_payload, timestamp, JSON_TOK_STRING),
     JSON_OBJ_DESCR_OBJECT(struct json_payload, location, json_location_descr),
     JSON_OBJ_DESCR_OBJECT(struct json_payload, environment, json_env_descr),
     JSON_OBJ_DESCR_OBJECT(struct json_payload, acceleration, json_accel_descr),
@@ -133,7 +130,6 @@ static const struct json_obj_descr json_payload_descr[] = {
 static const struct json_obj_descr json_header_descr[] = {
     JSON_OBJ_DESCR_PRIM(struct json_header, messageId, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(struct json_header, gatewayId, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_PRIM(struct json_header, timestamp, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(struct json_header, schemaVersion, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(struct json_header, messageType, JSON_TOK_STRING),
 };
@@ -157,7 +153,6 @@ static const char JSON_FORMAT[] =
     "\"header\":{"
         "\"messageId\":\"%s\","
         "\"gatewayId\":\"%s\","
-        "\"timestamp\":\"%s\","
         "\"schemaVersion\":\"%s\","
         "\"messageType\":\"%s\""
     "},"
