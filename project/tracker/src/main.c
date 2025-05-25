@@ -23,6 +23,7 @@
 #include <zephyr/drivers/comparator.h>
 #include <zephyr/drivers/timer/nrf_grtc_timer.h>
 
+#include <bluetooth.h>
 
 #define MAX_SAMPLES 1
 #define TEST_PARTITION	storage_partition
@@ -49,7 +50,7 @@ static const gpio_pin_t rgb_pins[] = {
 const struct device *sx1509b_dev;
 
 #define ALARM_CHANNEL_ID 0
-#define UPDATE 10// Update window (interrupts)
+#define UPDATE 60// Update window (interrupts)
 #define SAMPLE_RATE 500 // Time between samples grabbed in a row while awake
 #define X_THRESHOLD 2
 #define Y_THRESHOLD 2
@@ -66,24 +67,23 @@ struct counter_top_cfg ctr_top;
 
 int rtc_tick = 0;
 int accel_tick = 0;
-int ble_tick = 0;
 
-struct sensor_blk {
-    uint32_t time;
-    int32_t uptime;
-    float lat;
-    float lon;
-    float alt;
-    int16_t temp;
-    int16_t hum;
-    int16_t press;
-    int16_t gas;
-    int16_t x_accel; 
-    int16_t y_accel;
-    int16_t z_accel;
-    char ns;
-    char ew;
-};
+// struct sensor_blk {
+//     uint32_t time;
+//     int64_t uptime;
+//     float lat;
+//     char ns;
+//     float lon;
+//     char ew;
+//     float alt;
+//     int16_t temp;
+//     int16_t hum;
+//     int16_t press;
+//     int16_t gas;
+//     int16_t x_accel; 
+//     int16_t y_accel;
+//     int16_t z_accel;
+// };
 
 
 static struct neom9n_api *neo_api;
@@ -109,7 +109,6 @@ void init_rtc(void) {
     counter_set_top_value(rtc_2, &ctr_top);
     counter_start(rtc_2);
 }
-
 
 /*
 * Returns 0 if exited correctly
@@ -181,12 +180,11 @@ int read_gnss(uint32_t *time,
     neo_api->get_satellites(neo_dev, sat);
 
     if (*sat == 0) {
-        LOG_WRN("%f     %f       %f      %d", *lat, *lon, *alt, *sat);
+        LOG_WRN("%f     %f       %f      %d", (double)*lat, (double)*lon, (double)*alt, *sat);
         return -EINVAL;
     }
     return 0;
 }
-
 
 int read_sensors(int16_t *temp, int16_t *hum, int16_t *press, 
     int16_t *gas, int16_t *x_accel, int16_t *y_accel, int16_t *z_accel) {
@@ -279,6 +277,11 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
         //    sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
         //LOG_INF("gps read: %f      %f      %f", sensors.lat, sensors.lon, sensors.alt);
         // TODO: send sensors struct over bluetooth
+        
+        /* BLUETOOTH ADDITIONS*/
+        // Sensor data packed into bluetooth packet and base notified to request packet (sending packet)
+        pack_sensor_data(&sensors);
+        /*--------------------*/
 
     }
 
@@ -338,7 +341,7 @@ read_data:
             }
         }
 
-        sensors.uptime = k_uptime_get();
+        sensors.uptime = k_uptime_seconds();
         memcpy(&byte_array, &(sensors), sizeof(sensors));
         //LOG_INF("GPS: %f      %f      %f \n", sensors.lat, sensors.lon, sensors.alt);
         //LOG_INF("write: %d     %d      %d       %d        %d       %d        %d\n", 
@@ -376,7 +379,7 @@ static void accel_handler(const struct device *dev, const struct sensor_trigger 
     }
 }
 
-int main(void) { 
+int main(void) {
     const struct device *flash_dev = TEST_PARTITION_DEVICE;
     struct flash_parameters flash_params;
     memcpy(&flash_params, flash_get_parameters(flash_dev), sizeof(flash_params));
@@ -384,6 +387,14 @@ int main(void) {
 
     int err = 0;
     const struct device *const cons = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+
+    /* BLUETOOTH ADDITIONS*/
+    err = init_bluetooth();
+    if (err) {
+        printk("[TRACKER] Bluetooth init failed\n");
+        return -1;
+    }
+    /*--------------------*/
 
 	if (!device_is_ready(cons)) {
 		printf("%s: device not ready.\n", cons->name);
@@ -463,6 +474,13 @@ int main(void) {
 
             // TODO: Start advertising and set ble_tick
 
+            /* BLUETOOTH ADDITIONS*/
+             // Advertising started, ble_tick set on connection (in bluetooth.c file); accessible through get_ble_tick()
+            start_advertising(); 
+            /*--------------------*/
+
+            
+
         } else if (accel_tick) {
             // Woke from accel
             sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
@@ -474,17 +492,22 @@ int main(void) {
             sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
             sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
         } 
-        if (ble_tick) {
+        if (get_ble_tick()) {
             // TODO: Woke from BLE
             sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
             sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_MAX);
             sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
             read_loop(flash_dev, write_block_size);
-            ble_tick = 0;
             sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
             sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
             sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
             // TODO: Stop advertising and disconnect. 
+
+            /* BLUETOOTH ADDITIONS*/
+             // Advertising started, ble_tick set on connection (in bluetooth.c file); accessible through get_ble_tick()
+            stop_advertising_and_disconnect();
+            /*--------------------*/
+
         }
         LOG_INF("Napping... zzz...\n");
         // epilepsy check begin shutdown process
@@ -495,7 +518,7 @@ int main(void) {
         sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
         sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
         sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
-        while (!rtc_tick && !accel_tick && !ble_tick) {
+        while (!rtc_tick && !accel_tick && !get_ble_tick()) {
             k_cpu_idle(); // truly idle CPU while waiting
         }
     }
