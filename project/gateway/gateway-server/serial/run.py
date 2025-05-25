@@ -15,6 +15,7 @@ from serial_client import SerialClient
 from message_parser import parse_buffer
 from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
+from azure_iothub import send_json_to_azure_iot_hub
 
 # Configure root logger
 logging.basicConfig(
@@ -50,8 +51,8 @@ def main():
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
-
-    client = SerialClient(args.port, args.baud, parser_callback=parse_buffer)
+ 
+    client = SerialClient(args.port, args.baud, parser_callback=parse_buffer, received_callback=send_json_to_azure_iot_hub)
     client.start()
 
     print(f"Connected to {args.port} @ {args.baud}. Type 'exit' to quit.")

@@ -5,21 +5,25 @@ and forward valid ones via HTTP.
 
 import json
 import logging
+import re
 
-from http_client import HttpClient
-from settings import SERVER_URL
+from datetime import datetime
 
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.formatted_text import ANSI
+from azure_iothub import AzureIoTHubMqttClient
+from dotenv import load_dotenv
+
+from typing import Callable
 
 logger = logging.getLogger(__name__)
-_http = HttpClient(SERVER_URL)
+load_dotenv()
 
-
-def parse_buffer(buf: bytearray) -> bytearray:
+def parse_buffer(buf: bytearray, received: Callable) -> bytearray:
     """
     Extract newline-terminated lines from buf, strip off any non-JSON prefix,
-    attempt to parse the remainder as JSON, validate schema, and POST to server.
+    attempt to parse the remainder as JSON (even if it has trailing commas),
+    validate the new header/payload schema, and POST to server.
 
     Args:
         buf: Byte buffer that may contain partial or multiple lines.
@@ -28,40 +32,37 @@ def parse_buffer(buf: bytearray) -> bytearray:
         Leftover bytes after processing complete lines.
     """
     while b"\n" in buf:
-        line, _, rest = buf.partition(b"\n")
-        buf = rest
-
-        # Decode the line and trim whitespace/newlines
+        line, _, buf = buf.partition(b"\n")
         text = line.decode("utf-8", errors="ignore").strip()
         logger.debug("Raw line: %s", text)
-
         print_formatted_text(ANSI(text))
 
-        # Find the JSON payload start
-        json_idx = text.find("{")
-        if json_idx == -1:
+        # find the JSON start
+        idx = text.find("{")
+        if idx < 0:
             logger.debug("No JSON payload found; skipping line.")
             continue
+        json_text = text[idx:]
 
-        json_text = text[json_idx:]
-        logger.info("JSON candidate: %s", json_text)
+        # remove trailing commas before } or ]
+        json_text = re.sub(r",\s*}", "}", json_text)
+        json_text = "".join(ch for ch in json_text if ord(ch) >= 0x20)
 
-        # Try to parse JSON
         try:
             msg = json.loads(json_text)
-        except json.JSONDecodeError:
-            logger.debug("Malformed JSON; ignoring.")
+        except json.JSONDecodeError as e:
+            logger.error(f"Malformed JSON; ignoring. s:{json_text}:e")
             continue
 
-        # Minimal schema validation
-        if (
-            isinstance(msg.get("message_type"), int)
-            and isinstance(msg.get("timestamp"), int)
-            and isinstance(msg.get("message"), dict)
-        ):
-            _http.post_json(msg)
-        else:
-            logger.debug("JSON does not match schema; ignoring.")
+        payload = msg.get("payload", {})
+
+        # convert ISO time → epoch
+        try:
+            dt = datetime.fromisoformat(payload["time"])
+            payload["timestamp"] = int(dt.timestamp())
+        except ValueError:
+            logger.error("Invalid time format; skipping timestamp conversion.")
+
+        received(msg)
 
     return buf
-

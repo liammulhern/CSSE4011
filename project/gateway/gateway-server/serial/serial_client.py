@@ -23,7 +23,7 @@ class SerialClient:
             and returns any leftover bytes.
     """
 
-    def __init__(self, port: str, baudrate: int, parser_callback):
+    def __init__(self, port: str, baudrate: int, parser_callback, received_callback):
         """
         Initialize SerialClient.
 
@@ -39,6 +39,7 @@ class SerialClient:
             logger.error(f"Error initialising serial port failed with {e}")
             exit(1)
 
+        self.received_callback = received_callback
         self.parser_callback = parser_callback
         self._stop_event = threading.Event()
         self._thread = threading.Thread(
@@ -78,5 +79,5 @@ class SerialClient:
             chunk = self.ser.read(1024)
             if chunk:
                 buffer.extend(chunk)
-                buffer = self.parser_callback(buffer)
+                buffer = self.parser_callback(buffer, self.received_callback)
 
