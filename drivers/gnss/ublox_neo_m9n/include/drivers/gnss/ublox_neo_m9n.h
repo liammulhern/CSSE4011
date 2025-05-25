@@ -77,6 +77,9 @@ struct neom9n_data {
     uint8_t _buffer[MAX_NMEA_SIZE];
 
     struct time {
+        uint8_t day;
+        uint8_t month;
+        uint16_t year;
         uint8_t hour;
         uint8_t min;
         uint8_t sec;
@@ -93,6 +96,7 @@ struct neom9n_data {
     char ind_latitude;
 
     uint8_t satellites;
+    uint32_t timestamp;
 };
 
 typedef int (*neom9n_api_fetch_data)(const struct device *dev);
