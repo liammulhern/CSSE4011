@@ -181,6 +181,7 @@ int read_gnss(uint32_t *time,
     neo_api->get_satellites(neo_dev, sat);
 
     if (*sat == 0) {
+        LOG_WRN("%f     %f       %f      %d", *lat, *lon, *alt, *sat);
         return -EINVAL;
     }
     return 0;
@@ -274,8 +275,9 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
         flash_read(flash_dev, offset, &sensors, sizeof(sensors));
         offset += sizeof(sensors);
         read_size++;
-        LOG_INF("read: %d     %d      %d       %d        %d       %d        %d\n", 
-            sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
+        //LOG_INF("read: %d     %d      %d       %d        %d       %d        %d\n", 
+        //    sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
+        //LOG_INF("gps read: %f      %f      %f", sensors.lat, sensors.lon, sensors.alt);
         // TODO: send sensors struct over bluetooth
 
     }
@@ -338,8 +340,9 @@ read_data:
 
         sensors.uptime = k_uptime_get();
         memcpy(&byte_array, &(sensors), sizeof(sensors));
-        LOG_INF("write: %d     %d      %d       %d        %d       %d        %d\n", 
-            sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
+        //LOG_INF("GPS: %f      %f      %f \n", sensors.lat, sensors.lon, sensors.alt);
+        //LOG_INF("write: %d     %d      %d       %d        %d       %d        %d\n", 
+        //    sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
         for (int j = 0; j < write_cycles; j++) {
             offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((size) * (sizeof(sensors))) + j * write_block_size;
             flash_write(flash_dev, offset, &byte_array[j * write_block_size], write_block_size);
@@ -452,7 +455,7 @@ int main(void) {
   
             write_loop(flash_dev, write_block_size);
             rtc_tick = 0;
-            read_loop(flash_dev, write_block_size);
+            //read_loop(flash_dev, write_block_size);
             sx1509b_led_intensity_pin_set(sx1509b_dev, RED_LED, LED_OFF);
             sx1509b_led_intensity_pin_set(sx1509b_dev, BLUE_LED, LED_OFF);
             sx1509b_led_intensity_pin_set(sx1509b_dev, GREEN_LED, LED_OFF);
