@@ -269,29 +269,6 @@ struct bt_gatt_exchange_params mtu_params = {
     .func = exchange_func,
 };
 
-int stop_advertising_and_disconnect(struct bt_conn *conn)
-{
-    int err;
-
-    err = stop_advertising();
-    if (err) {
-        printk("[TRACKER] Failed to stop advertising\n");
-        return err;
-    }
-
-    if (conn) {
-        err = bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
-        if (err) {
-            printk("[TRACKER] Disconnection failed (err %d)\n", err);
-            return err;
-        } else {
-            printk("[TRACKER] Disconnection initiated\n");
-        }
-    }
-
-    return 0;
-}
-
 
 static void connected(struct bt_conn *conn, uint8_t err) {
     char addr[BT_ADDR_LE_STR_LEN];

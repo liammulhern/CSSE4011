@@ -24,29 +24,37 @@ static bool notify_enabled = false;  // NEW
 #define PACKED_DATA_LEN 64
 uint8_t packed_data[PACKED_DATA_LEN];
 
-// THIS WILL BE REMOVED AND INCLUDED IN ACTUAL FILE SET UP
-// -----------------------------------------------------------------
-struct sensor_blk {
-    uint32_t timestamp;
-    float lat;
-    char ns;
-    float lon;
-    char ew;
-    float alt; 
-    int sat;
-    int16_t temp;
-    int16_t hum;
-    int16_t press;
-    int16_t gas;
-    double x_accel; 
-    double y_accel;
-    double z_accel;
-};
-// -----------------------------------------------------------------
+// // THIS WILL BE REMOVED AND INCLUDED IN ACTUAL FILE SET UP
+// // -----------------------------------------------------------------
+// struct sensor_blk {
+//     uint32_t timestamp;
+//     float lat;
+//     char ns;
+//     float lon;
+//     char ew;
+//     float alt; 
+//     int sat;
+//     int16_t temp;
+//     int16_t hum;
+//     int16_t press;
+//     int16_t gas;
+//     double x_accel; 
+//     double y_accel;
+//     double z_accel;
+// };
+
+uint8_t ble_tick = 0;
+
+extern uint8_t get_ble_tick(void) {
+    return ble_tick;
+}
+
+extern void set_ble_tick(uint8_t value) {
+    ble_tick = value;
+}
 
 // 'digest' must be a buffer at least 32 bytes long (TC_SHA256_DIGEST_SIZE)
-void hash_sensor_blk(const struct sensor_blk *data, uint8_t *digest)
-{
+void hash_sensor_blk(const struct sensor_blk *data, uint8_t *digest) {
     struct tc_sha256_state_struct sha256_ctx;
 
     if (tc_sha256_init(&sha256_ctx) != TC_CRYPTO_SUCCESS) {
@@ -65,8 +73,7 @@ void hash_sensor_blk(const struct sensor_blk *data, uint8_t *digest)
     }
 }
 
-void print_sha256_digest(const uint8_t *digest)
-{
+void print_sha256_digest(const uint8_t *digest) {
     printk("SHA-256 digest: ");
     for (int i = 0; i < TC_SHA256_DIGEST_SIZE; i++) {
         printk("%02x", digest[i]);
@@ -123,6 +130,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
 
     current_conn = bt_conn_ref(conn);
     printk("[TRACKER] Connected\n");
+    ble_tick = 1;
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
@@ -132,6 +140,7 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
         bt_conn_unref(current_conn);
         current_conn = NULL;
     }
+    ble_tick = 0;
 }
 
 static struct bt_conn_cb conn_callbacks = {
@@ -230,15 +239,15 @@ static void print_packed_data() {
     printk("  Dev ID: %d\n", dev_id);
 }
 
-void pack_sensor_data(const struct sensor_blk *sensor) {
+extern void pack_sensor_data(const struct sensor_blk *sensor) {
     // Fill bytes 0..31 with SHA-256 digest
     hash_sensor_blk(sensor, packed_data);
 
     // Timestamp → bytes 32..35
-    packed_data[32] = (sensor->timestamp >> 24) & 0xFF;
-    packed_data[33] = (sensor->timestamp >> 16) & 0xFF;
-    packed_data[34] = (sensor->timestamp >> 8) & 0xFF;
-    packed_data[35] = sensor->timestamp & 0xFF;
+    packed_data[32] = (sensor->time >> 24) & 0xFF;
+    packed_data[33] = (sensor->time >> 16) & 0xFF;
+    packed_data[34] = (sensor->time >> 8) & 0xFF;
+    packed_data[35] = sensor->time & 0xFF;
 
     // Latitude → bytes 36..39
     int32_t lat_fixed = (int32_t)(sensor->lat * 1e7f);
@@ -261,8 +270,10 @@ void pack_sensor_data(const struct sensor_blk *sensor) {
     packed_data[46] = (alt_fixed >> 8) & 0xFF;
     packed_data[47] = alt_fixed & 0xFF;
 
-    // Satellites → byte 48
-    packed_data[48] = (uint8_t)(sensor->sat);
+    // Satellites → byte 48 --REMOVE
+    // packed_data[48] = (uint8_t)(sensor->sat);
+    packed_data[48] = 0;
+
 
     // Temperature → bytes 49..50
     int16_t temp_fixed = (int16_t)(sensor->temp);
@@ -285,9 +296,9 @@ void pack_sensor_data(const struct sensor_blk *sensor) {
     packed_data[56] = gas_fixed & 0xFF;
 
     // Accelerometer → bytes 57..62
-    int16_t x_fixed = (int16_t)(sensor->x_accel * 1000.0);
-    int16_t y_fixed = (int16_t)(sensor->y_accel * 1000.0);
-    int16_t z_fixed = (int16_t)(sensor->z_accel * 1000.0);
+    int16_t x_fixed = (int16_t)(sensor->x_accel);
+    int16_t y_fixed = (int16_t)(sensor->y_accel);
+    int16_t z_fixed = (int16_t)(sensor->z_accel);
 
     packed_data[57] = (x_fixed >> 8) & 0xFF;
     packed_data[58] = x_fixed & 0xFF;
@@ -310,7 +321,7 @@ void pack_sensor_data(const struct sensor_blk *sensor) {
     }
 }
 
-int init_bluetooth(void) {
+extern int init_bluetooth(void) {
     int err;
     printk("[TRACKER] Initializing Bluetooth...\n");
     err = bt_enable(NULL);
@@ -324,7 +335,7 @@ int init_bluetooth(void) {
     return 0;
 }
 
-int start_advertising(void) {
+extern int start_advertising(void) {
     int err;
     printk("[TRACKER] Starting advertising...\n");
     err = bt_le_adv_start(&adv_params, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
@@ -338,7 +349,7 @@ int start_advertising(void) {
     return 0;
 }
 
-int stop_advertising(void) {
+extern int stop_advertising(void) {
     k_msleep(1500); // wait for packets to clear before stopping
     int err;
     printk("[TRACKER] Stopping advertising...\n");
@@ -353,8 +364,7 @@ int stop_advertising(void) {
     return 0;
 }
 
-int stop_advertising_and_disconnect(struct bt_conn *conn)
-{
+extern int stop_advertising_and_disconnect() {
     int err;
 
     err = stop_advertising();
@@ -363,8 +373,8 @@ int stop_advertising_and_disconnect(struct bt_conn *conn)
         return err;
     }
 
-    if (conn) {
-        err = bt_conn_disconnect(conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
+    if (current_conn) {
+        err = bt_conn_disconnect(current_conn, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
         if (err) {
             printk("[TRACKER] Disconnection failed (err %d)\n", err);
             return err;
@@ -399,20 +409,19 @@ void tracker_thread(void) {
 
     // Example sensor data
     struct sensor_blk sensor = {
-        .timestamp = unix_ts,
+        .time = unix_ts,
         .lat = 37.7699999f,
         .ns = 'N',
         .lon = -122.419998f,
         .ew = 'W',
         .alt = 12.3f,
-        .sat = 7,
         .temp = 2350, //23.50
         .hum = 4567, //45.67
         .press = 10132, //10113.2
         .gas = 5230, //52.30
-        .x_accel = -0.900,
-        .y_accel = 0.200,
-        .z_accel = 0.985
+        .x_accel = -900, //-0.900,
+        .y_accel = 200, //0.200,
+        .z_accel = 985 //0.985
     };
 
     // uint8_t digest[TC_SHA256_DIGEST_SIZE];
@@ -437,7 +446,7 @@ void tracker_thread(void) {
 
         }
 
-        err = stop_advertising_and_disconnect(current_conn);
+        err = stop_advertising_and_disconnect();
         if (err) {
             return;
         }
