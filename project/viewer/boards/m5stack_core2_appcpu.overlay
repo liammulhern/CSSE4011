@@ -7,3 +7,7 @@
         zephyr,console = &uart0;
     };
 };
+
+&wifi {
+    status = "okay";
+};
