@@ -41,7 +41,7 @@ struct bt_gatt_discover_params discover_params[MAX_CONN];
 struct bt_gatt_discover_params cccd_discover_params[MAX_CONN];
 
 struct sensor_packet_t {
-    uint8_t data[64];
+    uint8_t data[68];
 };
 
 #define MSGQ_MAX_MSGS 10  // adjust if needed
@@ -94,12 +94,12 @@ static bool is_uuid_in_ad(struct net_buf_simple *ad, const struct bt_uuid *uuid)
 
 static uint8_t notify_func(struct bt_conn *conn, struct bt_gatt_subscribe_params *params,
                            const void *data, uint16_t length) {
-    if (!data || length != 64) {
+    if (!data || length != 68) {
         return BT_GATT_ITER_CONTINUE;
     }
 
     struct sensor_packet_t pkt;
-    memcpy(pkt.data, data, 64);
+    memcpy(pkt.data, data, 68);
 
     int ret = k_msgq_put(&sensor_msgq, &pkt, K_NO_WAIT);
     if (ret != 0) {
@@ -146,8 +146,8 @@ extern void process_data_thread(void) {
         // Altitude (2 bytes, int16_t)
         payload.alt = (pkt.data[46] << 8) | pkt.data[47];
 
-        // Satellites (1 byte)
-        payload.sat = pkt.data[48];
+        // PADDED empty byte
+        // pkt.data[48];
 
         // Temperature (2 bytes, int16_t)
         payload.temp = (pkt.data[49] << 8) | pkt.data[50];
@@ -169,13 +169,18 @@ extern void process_data_thread(void) {
         // Device ID (1 byte)
         payload.dev_id = pkt.data[63];
 
+        // Unpack timestamp (4 bytes, big endian)
+        payload.uptime = (pkt.data[64] << 24) |
+                             (pkt.data[65] << 16) |
+                             (pkt.data[66] << 8)  |
+                             pkt.data[67];
+
         struct json_full_packet json_packet = {0};
         fill_json_packet_from_tracker_payload(&payload, &json_packet);
         //print_json_full_packet(&json_packet);
         encode_and_print_json(&json_packet);
     }
 }
-
 
 // Step 1: Discover characteristic
 static uint8_t discover_func(struct bt_conn *conn,

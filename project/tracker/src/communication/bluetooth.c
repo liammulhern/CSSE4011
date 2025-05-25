@@ -21,27 +21,8 @@ static bool notify_enabled = false;  // NEW
 #define DEV_ID 2
 
 // Global buffer holding packed sensor data (14 bytes)
-#define PACKED_DATA_LEN 64
+#define PACKED_DATA_LEN 68
 uint8_t packed_data[PACKED_DATA_LEN];
-
-// // THIS WILL BE REMOVED AND INCLUDED IN ACTUAL FILE SET UP
-// // -----------------------------------------------------------------
-// struct sensor_blk {
-//     uint32_t timestamp;
-//     float lat;
-//     char ns;
-//     float lon;
-//     char ew;
-//     float alt; 
-//     int sat;
-//     int16_t temp;
-//     int16_t hum;
-//     int16_t press;
-//     int16_t gas;
-//     double x_accel; 
-//     double y_accel;
-//     double z_accel;
-// };
 
 uint8_t ble_tick = 0;
 
@@ -215,6 +196,11 @@ static void print_packed_data() {
     // Device ID (last byte)
     uint8_t dev_id = packed_data[63];
 
+    uint32_t uptime = (packed_data[64] << 24) |
+                         (packed_data[65] << 16) |
+                         (packed_data[66] << 8) |
+                         packed_data[67];
+
     // Print SHA-256 hash (bytes 0..31)
     printk("[TRACKER] Hash: ");
     for (int i = 0; i < 32; i++) {
@@ -225,6 +211,7 @@ static void print_packed_data() {
     // Print unpacked fields
     printk("[TRACKER] Parsed Data:\n");
     printk("  Timestamp: %u\n", timestamp);
+    printk("  uptime: %d\n", uptime);
     printk("  Latitude: %.7f %c\n", lat / 1e7, ns);
     printk("  Longitude: %.7f %c\n", lon / 1e7, ew);
     printk("  Altitude: %.1f m\n", alt / 10.0);
@@ -270,8 +257,7 @@ extern void pack_sensor_data(const struct sensor_blk *sensor) {
     packed_data[46] = (alt_fixed >> 8) & 0xFF;
     packed_data[47] = alt_fixed & 0xFF;
 
-    // Satellites → byte 48 --REMOVE
-    // packed_data[48] = (uint8_t)(sensor->sat);
+    //padded byte
     packed_data[48] = 0;
 
 
@@ -309,6 +295,12 @@ extern void pack_sensor_data(const struct sensor_blk *sensor) {
 
     // DEV_ID → byte 63
     packed_data[63] = DEV_ID & 0xFF;
+
+    // Timestamp → bytes 32..35
+    packed_data[64] = (sensor->uptime >> 24) & 0xFF;
+    packed_data[65] = (sensor->uptime >> 16) & 0xFF;
+    packed_data[66] = (sensor->uptime >> 8) & 0xFF;
+    packed_data[67] = sensor->uptime & 0xFF;
 
     // Notify
     if (notify_enabled && current_conn) {
@@ -350,7 +342,7 @@ extern int start_advertising(void) {
 }
 
 extern int stop_advertising(void) {
-    k_msleep(1500); // wait for packets to clear before stopping
+    k_msleep(2000); // wait for packets to clear before stopping
     int err;
     printk("[TRACKER] Stopping advertising...\n");
 
@@ -410,6 +402,7 @@ void tracker_thread(void) {
     // Example sensor data
     struct sensor_blk sensor = {
         .time = unix_ts,
+        .uptime = 5000,
         .lat = 37.7699999f,
         .ns = 'N',
         .lon = -122.419998f,

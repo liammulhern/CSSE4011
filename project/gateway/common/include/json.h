@@ -9,6 +9,7 @@
 
 typedef struct {
     uint32_t timestamp;
+    uint32_t uptime;
 
     int32_t lat;
     char ns;
@@ -17,7 +18,6 @@ typedef struct {
     char ew;
 
     int16_t alt;
-    uint8_t sat;
 
     int16_t temp;
     int16_t humid;
@@ -43,7 +43,6 @@ struct json_payload_location {
     char longitude[16];
     char ew[2];        
     char altitude_m[16];
-    int satellites;
 };
 
 // Environment block
@@ -65,6 +64,7 @@ struct json_payload_acceleration {
 struct json_payload {
     char deviceId[20];
     char timestamp[72];
+    uint32_t uptime;
     struct json_payload_location location;
     struct json_payload_environment environment;
     struct json_payload_acceleration acceleration;
@@ -99,7 +99,6 @@ static const struct json_obj_descr json_location_descr[] = {
     JSON_OBJ_DESCR_PRIM(struct json_payload_location, longitude, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(struct json_payload_location, ew, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(struct json_payload_location, altitude_m, JSON_TOK_STRING),
-    JSON_OBJ_DESCR_PRIM(struct json_payload_location, satellites, JSON_TOK_NUMBER),
 };
 
 // Environment
@@ -121,6 +120,7 @@ static const struct json_obj_descr json_accel_descr[] = {
 static const struct json_obj_descr json_payload_descr[] = {
     JSON_OBJ_DESCR_PRIM(struct json_payload, deviceId, JSON_TOK_STRING),
     JSON_OBJ_DESCR_PRIM(struct json_payload, timestamp, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(struct json_payload, uptime, JSON_TOK_NUMBER),
     JSON_OBJ_DESCR_OBJECT(struct json_payload, location, json_location_descr),
     JSON_OBJ_DESCR_OBJECT(struct json_payload, environment, json_env_descr),
     JSON_OBJ_DESCR_OBJECT(struct json_payload, acceleration, json_accel_descr),
@@ -159,13 +159,13 @@ static const char JSON_FORMAT[] =
     "\"payload\":{"
         "\"deviceId\":\"%s\","
         "\"time\":\"%s\","
+        "\"uptime\":\"%d\","
         "\"location\":{"
             "\"latitude\":\"%s\","
             "\"ns\":\"%s\","
             "\"longitude\":\"%s\","
             "\"ew\":\"%s\","
             "\"altitude_m\":\"%s\","
-            "\"satellites\":%d"
         "},"
         "\"environment\":{"
             "\"temperature_c\":\"%s\","

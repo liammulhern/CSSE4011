@@ -476,7 +476,13 @@ int main(void) {
 
             /* BLUETOOTH ADDITIONS*/
              // Advertising started, ble_tick set on connection (in bluetooth.c file); accessible through get_ble_tick()
-            start_advertising(); 
+            start_advertising();
+            //internally sleeps in stop advertising function
+            k_msleep(3000);
+            //Check that conncetion isn't established
+            if (!get_ble_tick()){
+                stop_advertising();
+            }
             /*--------------------*/
 
             
