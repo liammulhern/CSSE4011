@@ -70,11 +70,9 @@ int ble_tick = 0;
 
 struct sensor_blk {
     uint32_t time;
-    int64_t uptime;
+    int32_t uptime;
     float lat;
-    char ns;
     float lon;
-    char ew;
     float alt;
     int16_t temp;
     int16_t hum;
@@ -83,6 +81,8 @@ struct sensor_blk {
     int16_t x_accel; 
     int16_t y_accel;
     int16_t z_accel;
+    char ns;
+    char ew;
 };
 
 
