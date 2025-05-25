@@ -50,11 +50,11 @@ static const gpio_pin_t rgb_pins[] = {
 const struct device *sx1509b_dev;
 
 #define ALARM_CHANNEL_ID 0
-#define UPDATE 20// Update window (interrupts)
+#define UPDATE 600// Update window (interrupts)
 #define SAMPLE_RATE 500 // Time between samples grabbed in a row while awake
-#define X_THRESHOLD 2
-#define Y_THRESHOLD 2
-#define Z_THRESHOLD 10
+#define X_THRESHOLD 20 // changed from 2
+#define Y_THRESHOLD 20 // changed from 2
+#define Z_THRESHOLD 10 // changed from 10
 #define LIS2DH12_NODE DT_NODELABEL(lis2dh12)
 
 LOG_MODULE_REGISTER(tracker, LOG_LEVEL_INF);
@@ -288,16 +288,15 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
     //LOG_INF("Read call\n");
     // Triggered from bluetooth wakeup
     struct flash_consts flash_vars;
-    uint32_t read_size = 0;
     uint32_t offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET;
     flash_read(flash_dev, TEST_PARTITION_OFFSET, &flash_vars, sizeof(struct flash_consts));
     //LOG_INF("read consts:     %u      %u        %u       %u      %u\n", flash_vars.size, flash_vars.read_size, flash_vars.head, flash_vars.tail, flash_vars.wrap_around);
     struct sensor_blk sensors;
     //offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + (read_size * sizeof(struct sensor_blk));
-    offset = flash_vars.tail + (read_size * sizeof(struct sensor_blk));
+    offset = flash_vars.tail + (flash_vars.read_size * sizeof(struct sensor_blk));
     // Unpacks data since last bluetooth grab
     // Im blue dabadeebadubah
-    for (int i = read_size; i < flash_vars.size; i++) {
+    for (int i = flash_vars.read_size; i < flash_vars.size; i++) {
         if (offset >= 0x00080000) {
             LOG_INF("wrapping around in read\n");
             offset = TEST_PARTITION_OFFSET + FLASH_PAGE_SIZE;
@@ -310,7 +309,7 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
         flash_read(flash_dev, offset, &sensors, sizeof(sensors));
         //LOG_INF("Read: %d     %d       %d       %d\n", sensors.temp, sensors.hum, sensors.press, sensors.gas);
         offset += sizeof(sensors);
-        read_size++;
+        flash_vars.read_size++;
         /* BLUETOOTH ADDITIONS*/
         // Sensor data packed into bluetooth packet and base notified to request packet (sending packet)
         pack_sensor_data(&sensors);
@@ -318,7 +317,6 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
         /*--------------------*/
 
     }
-    flash_vars.read_size = read_size;
     //set the new "latest read offset"
     write_consts(flash_dev, write_block_size, flash_vars.size, flash_vars.read_size, flash_vars.head, flash_vars.tail, flash_vars.wrap_around);
     return;
