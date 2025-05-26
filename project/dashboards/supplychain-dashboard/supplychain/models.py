@@ -329,19 +329,11 @@ class ProductEvent(models.Model):
     Records an event in a product's lifecycle, anchored on-chain/off-chain.
     """
     EVENT_TYPE_MANUFACTURED = "manufactured"
-    EVENT_TYPE_TEMPERATURE_READING = "temperature_reading"
-    EVENT_TYPE_POSITION_READING = "position_reading"
-    EVENT_TYPE_GAS_READING = "gas_reading"
-    EVENT_TYPE_ACCELERATION_READING = "acceleration_reading"
-    EVENT_TYPE_HUMIDITY_READING = "humidity_reading"
+    EVENT_TYPE_TELEMETRY = "telemetry"
 
     EVENT_TYPE_CHOICES = [
         (EVENT_TYPE_MANUFACTURED, "Manufactured"),
-        (EVENT_TYPE_TEMPERATURE_READING, "Temperature Reading"),
-        (EVENT_TYPE_POSITION_READING, "Position Reading"),
-        (EVENT_TYPE_GAS_READING, "Gas Reading"),
-        (EVENT_TYPE_ACCELERATION_READING, "Acceleration Reading"),
-        (EVENT_TYPE_HUMIDITY_READING, "Humidity Reading"),
+        (EVENT_TYPE_TELEMETRY, "Telemetry"),
     ]
 
     message_id = models.UUIDField(
@@ -384,16 +376,6 @@ class ProductEvent(models.Model):
         help_text="When the event occurred."
     )
 
-    data_hash = models.CharField(
-        max_length=64,
-        help_text="SHA-256 hash of the raw payload."
-    )
-
-    data_uri = models.TextField(
-        blank=True,
-        help_text="URI to off-chain storage (e.g. CosmosDB link or IPFS CID)."
-    )
-
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True,
@@ -419,44 +401,6 @@ class ProductEvent(models.Model):
 
     def __str__(self):
         return f"{self.event_type} @ {self.timestamp.isoformat()} for {self.product}"
-
-    def compute_hash(self) -> HexStr:
-        """
-            SHA-256 over payload and message with sorted keys.
-
-            Returns:
-                HexString for hashed ProductEvent
-
-                e.g. "0x12398a12bc14e09"
-        """
-        serialized_key: str = json.dumps(
-            {
-                "message_id": self.message_id, 
-                "payload": self.payload
-            },
-            sort_keys=True
-        )
-
-        serialized_key_enc = hashlib.sha256(serialized_key.encode("utf-8")).hexdigest()
-
-        return HexStr(serialized_key_enc)
-
-    def verify_block_hash(self) -> bool:
-        """
-            Verify that an IOTA block has the same hash as the 
-            database model.
-
-            Args:
-                block: IOTA blockchain 
-
-            Return:
-                True if the on-chain hash matches the off-chain model
-        """
-        chain_message_id, chain_hash = iota_client.iota_get_block_data(self.message_id)
-
-        model_hash: HexStr  = self.compute_hash()
-
-        return chain_message_id == self.message_id and model_hash == chain_hash
 
 
 class ProductComposition(models.Model):

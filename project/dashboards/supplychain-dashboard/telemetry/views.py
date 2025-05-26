@@ -10,16 +10,18 @@ class TelemetryView(APIView):
     def post(self, request):
         data = request.data
 
-        # Validate the incoming data
         if not isinstance(data, dict):
             return Response({"error": "Invalid data format"}, status=400)
 
-        required_fields = ['message_id', 'gateway_id', 'message_type', 'payload']
+        required_fields = ['header', 'payload', 'signature']
 
         for field in required_fields:
             if field not in data:
                 return Response({"error": f"Missing required field: {field}"}, status=400)
 
-        gateway_ingest
+        try:
+            gateway_ingest.gateway_raw_data_ingest(data)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
 
         return Response({"status": "ok"})

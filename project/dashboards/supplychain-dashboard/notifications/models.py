@@ -7,7 +7,7 @@ from accounts.models import User, Role
 from supplychain.models import ProductEvent, ProductOrder, SupplyChainRequirement
 
 # Create your models here.
-class Notification(models.Model):
+class ProductNotification(models.Model):
     """
     Represents an alert generated from a product event that indicates a requirement was not met.
     """

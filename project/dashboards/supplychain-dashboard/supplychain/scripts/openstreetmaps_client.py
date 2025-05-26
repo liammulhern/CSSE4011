@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def reverse_geocode(lat: float, lon: float) -> dict:
+def osm_reverse_geocode(lat: float, lon: float) -> dict:
     """
     Reverse geocode a latitude and longitude using OpenStreetMap's Nominatim service.
 

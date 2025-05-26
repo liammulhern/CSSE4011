@@ -14,7 +14,7 @@ from typing import List, Dict, Any
 import math
 
 
-def create_notifications_from_trackerevent(productevent: ProductEvent) -> None:
+def create_notifications_from_productevent(productevent: ProductEvent) -> List[ProductNotification]:
     """
     Create Notification or Alert objects for each order+requirement
     that applies to this product event and whose timing matches.
@@ -28,9 +28,8 @@ def create_notifications_from_trackerevent(productevent: ProductEvent) -> None:
         order_timestamp__lte=event_ts
     ).distinct()
 
+    notifications = []
     with transaction.atomic():
-        notifications = []
-
         for order in orders:
             # 2) For each requirement attached to this order
             for productorder_requirement in order.order_requirements.select_related('requirement'):
@@ -52,8 +51,7 @@ def create_notifications_from_trackerevent(productevent: ProductEvent) -> None:
 
                     notifications.append(notification)
 
-        # 3) Save all notifications in a single transaction
-        ProductNotification.objects.bulk_create(notifications)
+    return notifications
 
 
 def get_value_based_notifications(
@@ -81,7 +79,7 @@ def get_value_based_notifications(
     high = details.get('max')
 
     if (low is not None and val < low) or (high is not None and val > high):
-        notification = ProductNotification(
+        notification = ProductNotification.objects.create(
             notication_type=ProductNotification.NOTICATION_TYPE_ALERT,
             productevent=productevent,
             requirement=requirement,
@@ -95,7 +93,7 @@ def get_value_based_notifications(
 
         return notification
 
-    notification = ProductNotification(
+    notification = ProductNotification.objects.create(
         notication_type=ProductNotification.NOTICATION_TYPE_NOTIFICATION,
         productevent=productevent,
         requirement=requirement,
@@ -114,7 +112,7 @@ def get_location_based_notifactions(
         productevent: ProductEvent,
         requirement: SupplyChainRequirement,
         order: ProductOrder
-    ) -> Notification | None:
+    ) -> ProductNotification | None:
     """
         Check if the product event meets the location-based requirement.
 
@@ -177,7 +175,7 @@ def get_location_based_notifactions(
         _, chosen = next(m for m in matches if m[0] == best_spec)
 
         if chosen["type"] == "include":
-            notification = ProductNotification(
+            notification = ProductNotification.objects.create(
                 notication_type=ProductNotification.NOTICATION_TYPE_NOTIFICATION,
                 productevent=productevent,
                 requirement=requirement,
@@ -191,7 +189,7 @@ def get_location_based_notifactions(
 
             return notification
 
-        notification = ProductNotification(
+        notification = ProductNotification.objects.create(
             notication_type=ProductNotification.NOTICATION_TYPE_ALERT,
             productevent=productevent,
             requirement=requirement,
@@ -208,7 +206,7 @@ def get_location_based_notifactions(
 
     # no rule matched → deny if any include-only rules exist
     if has_include:
-        notification = ProductNotification(
+        notification = ProductNotification.objects.create(
             notication_type=ProductNotification.NOTICATION_TYPE_ALERT,
             productevent=productevent,
             requirement=requirement,

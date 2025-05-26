@@ -47,9 +47,7 @@ def tracker_raw_data_ingest_batch(gateway: Gateway, payload: BatchTelemetryPaylo
 
         trackerevents.append(trackerevent)
 
-    trackerevents_created = TrackerEvent.objects.bulk_create(trackerevents)
-
-    return trackerevents_created
+    return trackerevents
 
 def tracker_raw_data_ingest(gateway: Gateway, payload: TelemetryPayload) -> TrackerEvent:
     """
@@ -79,7 +77,7 @@ def tracker_raw_data_ingest(gateway: Gateway, payload: TelemetryPayload) -> Trac
         raise ValueError("Invalid timestamp format. Must be an ISO 8601 string.")
 
     # 4. Create TrackerEvent instance
-    tracker_event = TrackerEvent(
+    tracker_event = TrackerEvent.objects.create(
         message_id=payload['messageId'],
         gateway=gateway,
         event_type=TrackerEvent.EVENT_TYPE_TELEMETRY,
