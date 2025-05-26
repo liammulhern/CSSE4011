@@ -15,7 +15,7 @@ from serial_client import SerialClient
 from message_parser import parse_buffer
 from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
-from azure_iothub import send_json_to_azure_iot_hub
+from azure_iothub import send_json_to_azure_iot_hub, send_test_message_to_azure_iot_hub
 
 # Configure root logger
 logging.basicConfig(
@@ -47,10 +47,19 @@ def main():
         action="store_true",
         help="Enable debug logging"
     )
+    parser.add_argument(
+        "--az-test",
+        action="store_true",
+        help="Run a test to send a message to Azure IoT Hub"
+    )
     args = parser.parse_args()
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    if args.az_test:
+        send_test_message_to_azure_iot_hub()
+        return
  
     client = SerialClient(args.port, args.baud, parser_callback=parse_buffer, received_callback=send_json_to_azure_iot_hub)
     client.start()

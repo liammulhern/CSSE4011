@@ -11,13 +11,10 @@ from datetime import datetime
 
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.formatted_text import ANSI
-from azure_iothub import AzureIoTHubMqttClient
-from dotenv import load_dotenv
 
 from typing import Callable
 
 logger = logging.getLogger(__name__)
-load_dotenv()
 
 def parse_buffer(buf: bytearray, received: Callable) -> bytearray:
     """

@@ -1,9 +1,11 @@
 import os
 import json
 import logging
+
 from azure.iot.device import IoTHubDeviceClient, Message
 from typing import Dict, Any
 from dotenv import load_dotenv
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -70,3 +72,14 @@ def send_json_to_azure_iot_hub(data: Dict[str, Any]) -> None:
         client.send_telemetry(data)
     finally:
         client.shutdown()
+
+def send_test_message_to_azure_iot_hub() -> None:
+    """
+    Send a test message to Azure IoT Hub to verify connectivity.
+    """
+    test_data = {
+        "message": "Hello from Azure IoT Hub client!",
+        "timestamp": f"{datetime.now().isoformat()}",
+    }
+    send_json_to_azure_iot_hub(test_data)
+    logger.info("Test message sent to Azure IoT Hub.")

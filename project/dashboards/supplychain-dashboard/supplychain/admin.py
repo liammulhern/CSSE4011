@@ -23,15 +23,6 @@ class GatewayAdmin(admin.ModelAdmin):
     list_filter = ('owner',)
     search_fields = ('gateway_key',)
 
-
-from supplychain.models import GatewayEventRaw
-@admin.register(GatewayEventRaw)
-class GatewayEventRaw(admin.ModelAdmin):
-    list_display = ('message_id', 'gateway_id', 'message_type')
-    list_filter = ('gateway_id', 'message_type')
-    search_fields = ('gateway_id',)
-
-
 from supplychain.models import CustodyTransfer
 @admin.register(CustodyTransfer)
 class CustodyTransferAdmin(admin.ModelAdmin):

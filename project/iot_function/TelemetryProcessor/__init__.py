@@ -1,29 +1,24 @@
-from iota_sdk import Client, HexStr, utf8_to_hex
-import azure.functions as func
-
 import logging
-import os
 import json
+import azure.functions as func
 import hashlib
-import psycopg2
 
-DATABASE_URL = os.environ["DATABASE_URL"]
-AZURE_EVENT_HUB_NAME = os.environ["AZURE_EVENT_HUB_NAME"]
-IOTA_NODE_URL = os.environ["IOTA_NODE_URL"]
+from typing import Dict, Any, TypedDict
 
-iota_client = Client(nodes=[IOTA_NODE_URL])
+def main(event: func.EventHubEvent):
+    # 1) Pull out the raw JSON string
+    body = event.get_body().decode("utf-8")
+    logging.info(f"Recieved: {body}")
 
-app = func.FunctionApp()
+    # 2) Parse it
+    try:
+        data = json.loads(body)
+        logging.info("Parsed telemetry: %s", data)
+        # …do your processing here…
+    except json.JSONDecodeError:
+        logging.warning("Received invalid JSON payload")
 
-@app.function_name(name="IoTHub-Trigger-Telemetry")
-@app.event_hub_message_trigger(arg_name="event", 
-                               event_hub_name=AZURE_EVENT_HUB_NAME,
-                               connection="IOTHUB_EVENTS_CS") 
-def process_sensor_data_function(event: func.EventHubEvent):
-    # Parse incoming IoT Hub message
-    body  = event.get_body().decode("utf-8")
-    record = json.loads(body)
-
+def process_sensor_data_function(record: Dict[str, Any]) -> None:
     # Compute SHA‐256 digest
     hash_computed = _compute_hash(record["messageId"], record["payload"])
 
@@ -50,49 +45,6 @@ def _store_offchain(record: dict, block_id: str) -> str:
         return 
             MessageId.
     """
-    conn = psycopg2.connect(
-        user=os.environ["DATABASE_USER"],
-        password=os.environ["DATABASE_PASSWORD"],
-        host=os.environ["DATABASE_HOST"],
-        port=os.environ["DATABASE_PORT"], 
-        database=os.environ["DATABASE_DB"]
-    )
-
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        INSERT INTO supplychain_trackerevent(
-            message_id, 
-            event_type, 
-            payload, 
-            timestamp, 
-            data_hash,
-            block_id
-        )
-        VALUES (
-            %s, 
-            %s, 
-            %s, 
-            %s,
-            %s,
-            %s
-        )
-        """,
-        (
-            record["messageId"],
-            record["eventType"],
-            json.dumps(record["payload"]),
-            record["timestamp"],
-            record["dataHash"],
-            block_id,
-        )
-    )
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
     return record["messageId"]
 
 def _compute_hash(message_id: str, payload: dict) -> str:
