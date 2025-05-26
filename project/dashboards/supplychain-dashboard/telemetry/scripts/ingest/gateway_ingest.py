@@ -68,7 +68,7 @@ def gateway_raw_data_ingest(data: GatewayData) -> GatewayEventRaw:
     # 7. Create a new GatewayEventRaw instance
     event = GatewayEventRaw.objects.create(
         message_id=header['messageId'],
-        gateway_id=header['gatewayId'],
+        gateway_key=header['gatewayId'],
         message_type=header['messageType'],
         gateway=gateway,
         payload=payload,

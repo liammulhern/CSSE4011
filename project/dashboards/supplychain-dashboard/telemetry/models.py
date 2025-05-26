@@ -22,7 +22,7 @@ class GatewayEventRaw(models.Model):
         help_text="Unique event identifier."
     )
 
-    gateway_id = models.CharField(
+    gateway_key = models.CharField(
         max_length=20,
         help_text="Unique gateway identifier"
     )

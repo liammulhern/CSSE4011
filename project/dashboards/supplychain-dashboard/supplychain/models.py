@@ -394,7 +394,6 @@ class ProductEvent(models.Model):
         ordering = ['timestamp']
         indexes = [
             models.Index(fields=['product', 'timestamp']),
-            models.Index(fields=['data_hash']),
         ]
         verbose_name = "Product Event"
         verbose_name_plural = "Product Events"

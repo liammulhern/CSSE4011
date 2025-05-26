@@ -6,7 +6,6 @@ from supplychain.models import ProductEvent
 class ProductEventAdmin(admin.ModelAdmin):
     list_display = ('message_id', 'product', 'event_type', 'timestamp', 'recorded_by')
     list_filter = ('event_type', 'timestamp', 'product')
-    search_fields = ('data_hash',)
 
 
 from supplychain.models import ProductType

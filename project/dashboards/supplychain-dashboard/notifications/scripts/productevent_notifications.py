@@ -5,7 +5,7 @@
 from django.db import transaction
 
 from supplychain.models import ProductEvent, ProductOrder, SupplyChainRequirement
-from supplychain.scripts import osm_reverse_geocode
+from supplychain.scripts.openstreetmaps_client import osm_reverse_geocode
 
 from notifications.models import ProductNotification
 

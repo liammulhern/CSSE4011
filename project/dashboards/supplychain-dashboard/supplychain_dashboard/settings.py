@@ -38,11 +38,14 @@ INSTALLED_APPS = [
     # third-party
     'rest_framework',
     'rest_framework_api_key',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
 
     # apps
     'accounts',
     'supplychain',
+    'telemetry',
+    'notifications',
 ]
 
 MIDDLEWARE = [
