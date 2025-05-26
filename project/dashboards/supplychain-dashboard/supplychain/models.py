@@ -328,6 +328,22 @@ class ProductEvent(models.Model):
     """
     Records an event in a product's lifecycle, anchored on-chain/off-chain.
     """
+    EVENT_TYPE_MANUFACTURED = "manufactured"
+    EVENT_TYPE_TEMPERATURE_READING = "temperature_reading"
+    EVENT_TYPE_POSITION_READING = "position_reading"
+    EVENT_TYPE_GAS_READING = "gas_reading"
+    EVENT_TYPE_ACCELERATION_READING = "acceleration_reading"
+    EVENT_TYPE_HUMIDITY_READING = "humidity_reading"
+
+    EVENT_TYPE_CHOICES = [
+        (EVENT_TYPE_MANUFACTURED, "Manufactured"),
+        (EVENT_TYPE_TEMPERATURE_READING, "Temperature Reading"),
+        (EVENT_TYPE_POSITION_READING, "Position Reading"),
+        (EVENT_TYPE_GAS_READING, "Gas Reading"),
+        (EVENT_TYPE_ACCELERATION_READING, "Acceleration Reading"),
+        (EVENT_TYPE_HUMIDITY_READING, "Humidity Reading"),
+    ]
+
     message_id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -352,6 +368,7 @@ class ProductEvent(models.Model):
     )
 
     event_type = models.CharField(
+        choices=EVENT_TYPE_CHOICES,
         max_length=50,
         help_text="Type of event (e.g. 'manufactured', 'temperature_reading')."
     )
@@ -712,6 +729,14 @@ class ProductOrder(models.Model):
         blank=True,
         related_name='trackers',
         help_text='Supply chain tracker/s that apply to this order.'
+    )
+
+    products = models.ManyToManyField(
+        Product,
+        through='ProductOrderItem',
+        blank=True,
+        related_name='product_orders',
+        help_text='Products included in this order.'
     )
 
     created_timestamp = models.DateTimeField(auto_now_add=True)
