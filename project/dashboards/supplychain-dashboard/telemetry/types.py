@@ -13,9 +13,23 @@ class Signature(TypedDict):
     keyId: str
     value: str
 
-class SensorReading(TypedDict):
-    id: str
-    value: int
+class LocationPayload(TypedDict):
+    latitude: float
+    ns: str  # 'N' or 'S'
+    longitude: float
+    ew: str  # 'E' or 'W'
+    altitude_m: float
+
+class EnvironmentPayload(TypedDict):
+    temperature_c: float
+    humidity_percent: float
+    pressure_hpa: float
+    gas_ppm: float
+
+class AccelerationPayload(TypedDict):
+    x_mps2: float
+    y_mps2: float
+    z_mps2: float
 
 #########
 # Telemetry
@@ -23,13 +37,13 @@ class SensorReading(TypedDict):
 
 class TelemetryPayload(TypedDict):
     messageId: str
-    timestamp: str
     deviceId: str
-    temperature: float
-    humidity: float
-    sensors: List[SensorReading]
+    timestamp: str
+    uptime: str
+    location: LocationPayload
+    environment: EnvironmentPayload
+    acceleration: AccelerationPayload
     hash: str
-    blockId: str
 
 class GatewayPayloadTelemetry(TypedDict):
     header: Header

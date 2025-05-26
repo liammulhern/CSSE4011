@@ -16,6 +16,7 @@ from message_parser import parse_buffer
 from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
 from azure_iothub import send_json_to_azure_iot_hub, send_test_message_to_azure_iot_hub
+from http_client import send_test_message_to_local_server
 
 # Configure root logger
 logging.basicConfig(
@@ -65,6 +66,10 @@ def main():
 
     if args.az_test:
         send_test_message_to_azure_iot_hub()
+        return
+
+    if args.local_test:
+        send_test_message_to_local_server()
         return
  
     client = SerialClient(args.port, args.baud, parser_callback=parse_buffer, received_callback=send_json_to_azure_iot_hub)

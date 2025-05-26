@@ -285,7 +285,7 @@ class TrackerEvent(models.Model):
         verbose_name_plural = "Tracker Events"
 
     def __str__(self):
-        return f"{self.event_type} @ {self.timestamp.isoformat()} for {self.product}"
+        return f"{self.event_type} @ {self.timestamp.isoformat()} for {self.tracker}"
 
     def compute_hash(self) -> HexStr:
         """

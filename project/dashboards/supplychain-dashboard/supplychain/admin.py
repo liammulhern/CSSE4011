@@ -22,6 +22,24 @@ class GatewayAdmin(admin.ModelAdmin):
     list_filter = ('owner',)
     search_fields = ('gateway_key',)
 
+
+from supplychain.models import Tracker
+@admin.register(Tracker)
+class TrackerAdmin(admin.ModelAdmin):
+    list_display = ('tracker_key', 'owner', 'created_timestamp')
+    list_filter = ('owner',)
+    search_fields = ('tracker_key',)
+    raw_id_fields = ('owner',)
+
+
+from supplychain.models import TrackerEvent
+@admin.register(TrackerEvent)
+class TrackerEventAdmin(admin.ModelAdmin):
+    list_display = ('message_id', 'tracker', 'event_type', 'timestamp')
+    list_filter = ('event_type', 'timestamp', 'tracker')
+    search_fields = ('message_id', 'tracker__tracker_key')
+    raw_id_fields = ('tracker',)
+
 from supplychain.models import CustodyTransfer
 @admin.register(CustodyTransfer)
 class CustodyTransferAdmin(admin.ModelAdmin):
@@ -35,6 +53,7 @@ class ProductCompositionInline(admin.TabularInline):
     model = ProductComposition
     fk_name = 'parent'
     extra = 1
+
 
 @admin.register(ProductComposition)
 class ProductCompositionAdmin(admin.ModelAdmin):

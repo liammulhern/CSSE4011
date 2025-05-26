@@ -22,7 +22,7 @@ SECRET_KEY = 'django-insecure-mnvfwk&-)m&$4_&e1bm3+=n1q7)8bso2krc!x#4pbs!)p&4q@!
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -128,6 +128,3 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 IOTA_NODE_URL = 'https://api.testnet.iotaledger.net'
-
-
-

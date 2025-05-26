@@ -13,7 +13,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def tracker_raw_data_ingest_from_gateway(gatewayeventraw: GatewayEventRaw) -> List[TrackerEvent]:
+def tracker_raw_data_ingest_from_gatewayevent(gatewayeventraw: GatewayEventRaw) -> List[TrackerEvent]:
     """ Ingests raw gateway data into the TrackerEvent model.
 
     Args:
@@ -22,9 +22,9 @@ def tracker_raw_data_ingest_from_gateway(gatewayeventraw: GatewayEventRaw) -> Li
     Returns:
         TrackerEvent: The created TrackerEvent instance.
     """
-    if gatewayeventraw.message_type == GatewayEventRaw.MESSAGE_TYPE_TELEMETRY:
+    if gatewayeventraw.message_type == GatewayEventRaw.MESSAGE_TYPE_BATCH_TELEMETRY:
         return tracker_raw_data_ingest_batch(gatewayeventraw.gateway, gatewayeventraw.payload)
-    elif gatewayeventraw.message_type == GatewayEventRaw.MESSAGE_TYPE_BATCH_TELEMETRY:
+    elif gatewayeventraw.message_type == GatewayEventRaw.MESSAGE_TYPE_TELEMETRY:
         return [tracker_raw_data_ingest(gatewayeventraw.gateway, gatewayeventraw.payload)]
 
     return []
@@ -96,7 +96,7 @@ def tracker_raw_data_ingest(gateway: Gateway, payload: TelemetryPayload) -> Trac
             tracker=tracker,
             message=f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {payload['hash']}.",
             timestamp=timestamp,
-            severity=TrackerNotification.NOTICATION_TYPE_ALERT,
+            notication_type=TrackerNotification.NOTICATION_TYPE_ALERT,
         )
 
         logger.error(f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {payload['hash']}.")

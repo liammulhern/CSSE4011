@@ -77,11 +77,11 @@ class ProductNotification(models.Model):
     )
 
     class Meta:
-        verbose_name = "Notification"
-        verbose_name_plural = "Notifications"
+        verbose_name = "Product Notification"
+        verbose_name_plural = "Product Notifications"
         ordering = ['-created_timestamp']
         indexes = [
-            models.Index(fields=['order'])
+            models.Index(fields=['order']),
         ]
 
     def __str__(self):
@@ -170,6 +170,14 @@ class TrackerNotification(models.Model):
         help_text="User who acknowledged the notification."
     )
 
+    class Meta:
+        verbose_name = "Tracker Notification"
+        verbose_name_plural = "Tracker Notifications"
+        ordering = ['-created_timestamp']
+        indexes = [
+            models.Index(fields=['tracker'])
+        ]
+
     def acknowledge(self, user: User) -> None:
         """
             Mark this notification as acknowledged by a user.
@@ -181,13 +189,6 @@ class TrackerNotification(models.Model):
 
         if Role.ADMIN not in get_user_roles(user, self.order.owner):
             raise ValueError("User must be an admin to acknowledge notifications.")
-
-        # check that the user is at the company of the order
-        if self.order.owner is None:
-            raise ValueError("Order must have an owner to acknowledge notifications.")
-
-        if user.company != self.order.owner:
-            raise ValueError("User must belong to the company of the order to acknowledge notifications.")
 
         if self.acknowledged_by is not None:
             raise ValueError("Notification has already been acknowledged.")
