@@ -152,17 +152,11 @@ watch(
       <!-- EVENTS: live feed + alerts -->
       <TabsContent value="events" class="space-y-4">
         <Card>
-          <CardHeader class="flex items-center justify-between pb-3">
-            <CardTitle class="text-lg font-medium">Live Event Feed</CardTitle>
-          </CardHeader>
           <CardContent>
             <LiveEventFeed />
           </CardContent>
         </Card>
         <Card>
-          <CardHeader class="flex items-center justify-between pb-3">
-            <CardTitle class="text-lg font-medium">Compliance Alerts</CardTitle>
-          </CardHeader>
           <CardContent>
             <ComplianceAlerts />
           </CardContent>

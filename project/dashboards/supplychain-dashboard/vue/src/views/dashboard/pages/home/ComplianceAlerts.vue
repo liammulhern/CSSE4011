@@ -1,110 +1,129 @@
 <script setup lang="ts">
-import { ref, onMounted, h } from 'vue'
-import http from '@/utils/http'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { ref, onMounted, computed, h } from 'vue'
 import { DataTable, type ColumnDef } from '@/components/ui/data-table'
 import DataTableHeader from '@/components/ui/data-table/DataTableHeader.vue'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import { useProductNotificationStore, type ProductNotification } from '@/stores/productnotification'
 
-// Alert interface matching expected API response
-interface ComplianceAlert {
-  id: number
-  order_id: number
-  tracker_id: string | null
-  requirement_name: string
-  event_type: string
-  actual_value: string
-  timestamp: string
+// Utility to format ISO timestamps
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString()
 }
 
-const data = ref<ComplianceAlert[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
+// Pinia store for notifications
+const notificationStore = useProductNotificationStore()
 
-/**
- * Fetch compliance alerts from the API
- */
-async function fetchAlerts() {
-  loading.value = true
-  error.value = null
-  try {
-    const resp = await http.get<{ results: ComplianceAlert[] }>('/api/compliance-alerts/')
-    data.value = resp.data.results.map(a => ({
-      ...a,
-      timestamp: new Date(a.timestamp).toLocaleString(),
-    }))
-  } catch (e: any) {
-    error.value = e.message || String(e)
-  } finally {
-    loading.value = false
+// Fetch alerts on mount
+onMounted(() => {
+  notificationStore.fetchAlerts()
+})
+
+// Table data and state
+const data = computed<ProductNotification[]>(() => notificationStore.alerts)
+const loading = computed(() => notificationStore.alertsLoading)
+const error = computed(() => notificationStore.alertsError)
+
+// Selected IDs for acknowledgement
+const selectedIds = ref<number[]>([])
+const hasSelection = computed(() => selectedIds.value.length > 0)
+
+async function acknowledgeSelected() {
+  for (const id of selectedIds.value) {
+    try {
+      await notificationStore.acknowledgeNotification(id)
+    } catch (e) {
+      console.error(`Failed to acknowledge ${id}:`, e)
+    }
   }
+  selectedIds.value = []
+  notificationStore.fetchAlerts()
 }
 
-onMounted(fetchAlerts)
-
-// Define table columns
-const columns: ColumnDef<ComplianceAlert>[] = [
+// Table columns with selection checkbox, formatted date, and message with tooltip
+const columns: ColumnDef<ProductNotification>[] = [
   {
-    accessorKey: 'id',
-    header: ({ table }) => h(Checkbox, {
-      checked: table.getIsAllPageRowsSelected(),
-      'onUpdate:checked': val => table.toggleAllPageRowsSelected(!!val),
-      ariaLabel: 'Select All',
-      class: 'translate-y-0.5',
-    }),
-    cell: ({ row }) => h(Checkbox, {
-      checked: row.getIsSelected(),
-      'onUpdate:checked': val => row.toggleSelected(!!val),
-      ariaLabel: 'Select row',
-      class: 'translate-y-0.5',
-      enableSorting: false,
-      enableHiding: false,
-    }),
+    id: 'select',
+    header: ({ table }) =>
+      h(Checkbox, {
+        checked: selectedIds.value.length === data.value.length && data.value.length > 0,
+        indeterminate:
+          selectedIds.value.length > 0 && selectedIds.value.length < data.value.length,
+        'onUpdate:checked': (val: boolean) => {
+          selectedIds.value = val ? data.value.map((a) => a.id) : []
+        },
+        ariaLabel: 'Select All',
+      }),
+    cell: ({ row }) => {
+      const id = row.original.id
+      return h(Checkbox, {
+        checked: selectedIds.value.includes(id),
+        'onUpdate:checked': (val: boolean) => {
+          if (val) selectedIds.value.push(id)
+          else selectedIds.value = selectedIds.value.filter((i) => i !== id)
+        },
+        ariaLabel: `Select alert ${id}`,
+        enableSorting: false,
+        enableHiding: false,
+      })
+    },
   },
+  { accessorKey: 'id', header: ({ column }) => h(DataTableHeader, { column, title: 'Alert ID' }) },
+  { accessorKey: 'productevent', header: ({ column }) => h(DataTableHeader, { column, title: 'Event ID' }) },
+  { accessorKey: 'order', header: ({ column }) => h(DataTableHeader, { column, title: 'Order #' }) },
   {
-    accessorKey: 'id',
-    header: ({ column }) => h(DataTableHeader, { column, title: 'Alert ID' }),
-  },
-  {
-    accessorKey: 'order_id',
-    header: ({ column }) => h(DataTableHeader, { column, title: 'Order #' }),
-  },
-  {
-    accessorKey: 'tracker_id',
-    header: ({ column }) => h(DataTableHeader, { column, title: 'Tracker ID' }),
-  },
-  {
-    accessorKey: 'requirement_name',
+    accessorKey: 'requirement',
     header: ({ column }) => h(DataTableHeader, { column, title: 'Requirement' }),
     cell: ({ getValue }) => h(Badge, { variant: 'warning' }, () => String(getValue())),
   },
   {
-    accessorKey: 'event_type',
-    header: ({ column }) => h(DataTableHeader, { column, title: 'Event Type' }),
-  },
-  {
-    accessorKey: 'actual_value',
-    header: ({ column }) => h(DataTableHeader, { column, title: 'Actual Value' }),
-  },
-  {
     accessorKey: 'timestamp',
     header: ({ column }) => h(DataTableHeader, { column, title: 'Timestamp' }),
+    cell: ({ row }) => formatDateTime(row.original.timestamp),
   },
   {
-    id: 'actions',
-    header: () => ' ',
-    cell: () => h(Button, { variant: 'ghost', size: 'sm' }, () => 'Details'),
-  }
+    accessorKey: 'message',
+    header: ({ column }) => h(DataTableHeader, { column, title: 'Message' }),
+    cell: ({ getValue }) => {
+      const msg = String(getValue())
+      // Truncate with tooltip for long messages
+      return h(
+        Tooltip,
+        {},
+        {
+          default: () => h(
+            TooltipTrigger,
+            { asChild: true },
+            () => h('div', { class: 'truncate max-w-xs' }, msg)
+          ),
+          content: () => h(TooltipContent, null, msg),
+        }
+      )
+    },
+  },
 ]
 </script>
 
 <template>
-  <div>
-    <div v-if="loading" class="text-center">Loading alerts…</div>
-    <div v-else-if="error" class="text-red-500">Error: {{ error }}</div>
-    <div v-else>
-      <DataTable :columns="columns" :data="data" />
+  <TooltipProvider>
+    <div class="space-y-4">
+      <!-- Acknowledge button -->
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-medium">Alerts</h2>
+        <Button variant="outline" :disabled="!hasSelection" @click="acknowledgeSelected">
+          Acknowledge Selected
+        </Button>
+      </div>
+
+      <!-- Table -->
+      <div v-if="loading" class="text-center">Loading alerts…</div>
+      <div v-else-if="error" class="text-red-500">Error: {{ error }}</div>
+      <div v-else>
+        <DataTable :columns="columns" :data="data" />
+      </div>
     </div>
-  </div>
+  </TooltipProvider>
 </template>

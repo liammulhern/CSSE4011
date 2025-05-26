@@ -35,7 +35,9 @@ class ProductNotification(models.Model):
         SupplyChainRequirement,
         on_delete=models.CASCADE,
         related_name='notifications',
-        help_text="The supply chain requirement that was not met."
+        help_text="The supply chain requirement that was not met.",
+        blank=True,
+        null=True,
     )
 
     order = models.ForeignKey(
@@ -85,7 +87,7 @@ class ProductNotification(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.notication_type} - {self.requirement.name} for {self.productevent.product.name} on {self.created_timestamp}"
+        return f"{self.notication_type} for {self.productevent.product.product_key} on {self.created_timestamp}"
 
     def acknowledge(self, user: User) -> None:
         """

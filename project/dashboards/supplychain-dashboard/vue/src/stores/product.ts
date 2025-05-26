@@ -103,6 +103,42 @@ export const useProductStore = defineStore('product', {
       }
     },
 
+    /**
+     * Create a new product
+     * @returns created Product
+     */
+    async createProduct(payload: Partial<Product>) {
+      this.loading = true
+      this.error = null
+      try {
+        const { data } = await http.post<Product>('/api/products/', payload)
+        this.productsList.unshift(data)
+        return data
+      } catch (err: any) {
+        this.error = err.response?.data?.detail || err.message || String(err)
+        throw err
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /** Fetch all products linked to this company */
+    async fetchProducts() {
+      this.listLoading = true
+      this.listError = null
+
+      try {
+        const { data } = await http.get<Product[]>(
+          `/api/products/`,
+        )
+        this.productsList = data
+      } catch (err: any) {
+        this.listError = err.message || String(err)
+      } finally {
+        this.listLoading = false
+      }
+    },
+
     /** Fetch all products linked to a given ProductOrder */
     async fetchProductsByOrder(orderId: string | number) {
       this.listLoading = true

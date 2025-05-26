@@ -1,9 +1,16 @@
 from django.db import transaction
+from iota_sdk import HexStr
+from notifications.models import ProductNotification
 from supplychain.models import TrackerEvent, ProductEvent, ProductOrderTracker, ProductOrderStatus, Product, ProductOrderRequirement, ProductOrder
 
 from typing import List, Optional
 
 from datetime import datetime
+
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def create_productevent_from_trackerevent(trackerevent: TrackerEvent) -> List[ProductEvent]:
     """
@@ -52,6 +59,20 @@ def create_productevent_from_trackerevent(trackerevent: TrackerEvent) -> List[Pr
                     timestamp=trackerevent.timestamp,
                     recorded_by=None,
                 )
+
+                # Verify the product hash
+                if HexStr(trackerevent.data_hash) != trackerevent.compute_hash():
+                    ProductNotification.objects.create(
+                        productevent=productevent,
+                        message=f"Payload hash mismatch for product event.",
+                        timestamp=trackerevent.timestamp,
+                        notication_type=ProductNotification.NOTICATION_TYPE_ALERT,
+                    )
+
+                    logger.error(
+                        f"Data hash mismatch for ProductEvent {productevent.pk}. "
+                        f"Expected {HexStr(trackerevent.data_hash)}, got {trackerevent.compute_hash()}"
+                    )
 
                 productevents.append(productevent)
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import GlobalSearchPopover from '@/components/core/GlobalSearchPopover.vue';
-import { Avatar, AvatarImage } from '@/components/ui/avatar';
+import GlobalSearchPopover from '@/components/core/GlobalSearchPopover.vue'
+import { Avatar, AvatarImage } from '@/components/ui/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import Breadcrumb from '@/components/ui/Breadcrumb.vue';
+import Breadcrumb from '@/components/ui/Breadcrumb.vue'
 import {
   LogOut,
   User,
@@ -19,23 +19,37 @@ import {
   MoonStar,
   Menu,
 } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button';
-import { useAppStore } from '@/stores/app';
-import { useAuthStore } from '@/stores/auth';
-import { computed } from 'vue'
+import { Button } from '@/components/ui/button'
+import { useAppStore } from '@/stores/app'
+import { useAuthStore } from '@/stores/auth'
+import { useProductNotificationStore } from '@/stores/productnotification'
+import { computed, onMounted } from 'vue'
 import { logout, isAuthenticated } from '@/services/auth'
 
-const store = useAppStore();
-const auth = useAuthStore();
+const store = useAppStore()
+const auth = useAuthStore()
+const notificationStore = useProductNotificationStore()
+
+// Load alerts on mount
+onMounted(() => {
+  notificationStore.fetchAlerts()
+})
 
 const toggleMode = () => {
-  store.toggleTheme();
-};
+  store.toggleTheme()
+}
 
-const user = computed(() => auth.user);
-const username = computed(() => auth.user?.username ?? 'Guest');
-const useremail = computed(() => auth.user?.email ?? '');
+const user = computed(() => auth.user)
+const username = computed(() => auth.user?.username ?? 'Guest')
+const useremail = computed(() => auth.user?.email ?? '')
 
+// Count unacknowledged alerts
+const unackCount = computed(() => {
+  const count = notificationStore.alerts.filter(n => !n.acknowledged_timestamp).length
+  return count > 99 ? '99+' : String(count)
+})
+
+const showBadge = computed(() => parseInt(unackCount.value) > 0 || unackCount.value === '99+')
 </script>
 
 <template>
@@ -53,9 +67,15 @@ const useremail = computed(() => auth.user?.email ?? '');
       <Menu class="transition-all duration-500 text-black" />
     </Button>
     <div class="flex items-center">
-      <Button variant="outline" class="border-0 p-[6px] w-8 h-8">
+      <!-- Bell icon with badge -->
+      <Button variant="outline" class="relative border-0 p-[6px] w-8 h-8">
         <Bell />
+        <span v-if="showBadge"
+          class="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold leading-none rounded-full bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))]">
+          {{ unackCount }}
+        </span>
       </Button>
+
       <Button variant="outline" class="border-0 p-[6px] ml-2 w-8 h-8" @click="toggleMode">
         <Sun v-if="store.isDark" />
         <MoonStar v-else />
