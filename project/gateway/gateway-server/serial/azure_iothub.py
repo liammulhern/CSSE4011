@@ -77,9 +77,42 @@ def send_test_message_to_azure_iot_hub() -> None:
     """
     Send a test message to Azure IoT Hub to verify connectivity.
     """
-    test_data = {
-        "message": "Hello from Azure IoT Hub client!",
-        "timestamp": f"{datetime.now().isoformat()}",
+    payload = {
+      "header": {
+        "messageId": "d1c5261e-49ef-4cfc-a782-473549797b01",
+        "gatewayId": "GW-01",
+        "schemaVersion": "1.0",
+        "messageType": "telemetry"
+      },
+      "payload": {
+        "deviceId": "dev-1",
+        "time": "1970-01-01T00:00:00",
+        "uptime": "494",
+        "location": {
+          "latitude": "27.5002432",
+          "ns": "S",
+          "longitude": "153.0153600",
+          "ew": "E",
+          "altitude_m": "0.0"
+        },
+        "environment": {
+          "temperature_c": "26.22",
+          "humidity_percent": "69.00",
+          "pressure_hpa": "102.3",
+          "gas_ppm": "28.00"
+        },
+        "acceleration": {
+          "x_mps2": "2.413",
+          "y_mps2": "-0.459",
+          "z_mps2": "-6.511"
+        }
+      },
+      "signature": {
+        "alg": "HS256",
+        "keyId": "key-001",
+        "value": "FBDA00C64513C32B027DA202C4C0574E86CE9FE462C42B8BB3B7734380810DA8"
+      }
     }
-    send_json_to_azure_iot_hub(test_data)
+
+    send_json_to_azure_iot_hub(payload)
     logger.info("Test message sent to Azure IoT Hub.")

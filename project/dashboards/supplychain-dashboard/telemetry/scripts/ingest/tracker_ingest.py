@@ -1,4 +1,7 @@
+from iota_sdk import HexStr
 from supplychain.models import Gateway, TrackerEvent, Tracker
+
+from notifications.models import TrackerNotification
 
 from telemetry.models import GatewayEventRaw
 from telemetry.types import TelemetryPayload, BatchTelemetryPayload, EventPayload, HeartbeatPayload, matches_typed_dict
@@ -76,15 +79,30 @@ def tracker_raw_data_ingest(gateway: Gateway, payload: TelemetryPayload) -> Trac
     except ValueError:
         raise ValueError("Invalid timestamp format. Must be an ISO 8601 string.")
 
-    # 4. Create TrackerEvent instance
+
+    # 5. Create TrackerEvent instance
     tracker_event = TrackerEvent.objects.create(
         message_id=payload['messageId'],
+        tracker=tracker,
         gateway=gateway,
         event_type=TrackerEvent.EVENT_TYPE_TELEMETRY,
         payload=payload,
         timestamp=timestamp,
         data_hash=payload['hash'],
-        block_id=payload['blockId'],
     )
+
+    if HexStr(payload['hash']) != tracker_event.compute_hash():
+        TrackerNotification.objects.create(
+            tracker=tracker,
+            message=f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {payload['hash']}.",
+            timestamp=timestamp,
+            severity=TrackerNotification.NOTICATION_TYPE_ALERT,
+        )
+
+        logger.error(f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {payload['hash']}.")
+    else:
+        # Upload the tracker event to the blockchain
+        block_id = tracker_event.anchor_on_iota()
+        logger.info(f"Anchored tracker event {tracker_event.message_id} as IOTA block {block_id}")
 
     return tracker_event

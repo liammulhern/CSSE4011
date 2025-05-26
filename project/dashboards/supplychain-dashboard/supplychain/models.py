@@ -266,7 +266,9 @@ class TrackerEvent(models.Model):
 
     block_id = models.CharField(
         max_length=64,
-        help_text="IOTA block id of the onchain hash."
+        help_text="IOTA block id of the onchain hash.",
+        blank=True,
+        null=True,
     )
 
     created_timestamp = models.DateTimeField(
@@ -322,6 +324,26 @@ class TrackerEvent(models.Model):
         model_hash: HexStr  = self.compute_hash()
 
         return chain_message_id == self.message_id and model_hash == chain_hash
+
+    def anchor_on_iota(self) -> str:
+        """
+        Publish zero‐value tagged data to IOTA blockchain.
+
+        Args:
+            None
+
+        Returns:
+            BlockId of stored block
+        """
+        block_id, _ = iota_client.iota_build_and_post_block(
+            message_id=self.message_id,
+            data_hex=self.data_hash,
+        )
+
+        self.block_id = block_id
+        self.save()
+
+        return block_id
 
 
 class ProductEvent(models.Model):

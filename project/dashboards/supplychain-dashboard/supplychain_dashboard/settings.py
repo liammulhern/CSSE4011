@@ -24,9 +24,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
-# Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -79,9 +76,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'supplychain_dashboard.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
 DATABASES = {
     'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
 }
@@ -95,11 +89,11 @@ AUTHENTICATION_BACKENDS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework_api_key.permissions.HasAPIKey',
         'accounts.auth.QRAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'accounts.permissions.IsCompanyAdminOrReadOnly',
+        'rest_framework_api_key.permissions.HasAPIKey',
     ),
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',

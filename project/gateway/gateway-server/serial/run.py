@@ -52,6 +52,12 @@ def main():
         action="store_true",
         help="Run a test to send a message to Azure IoT Hub"
     )
+    parser.add_argument(
+        "--local-test",
+        action="store_true",
+        help="Run a test to send a message to the local HTTP server"
+    )
+
     args = parser.parse_args()
 
     if args.verbose:

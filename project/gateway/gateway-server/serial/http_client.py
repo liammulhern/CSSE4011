@@ -4,40 +4,69 @@ Simple HTTP client for posting JSON payloads.
 
 import logging
 import requests
+import os
 
 logger = logging.getLogger(__name__)
 
+from dotenv import load_dotenv
 
-class HttpClient:
+load_dotenv()
+
+def send_test_message_to_local_server():
     """
-    Wraps requests.post to send JSON payloads.
-
-    Attributes:
-        server_url: The URL to POST to.
+    POST a JSON payload to the configured server.
     """
 
-    def __init__(self, server_url: str):
-        """
-        Initialize with target server URL.
+    payload = {
+      "header": {
+        "messageId": "d1c5261e-49ef-4cfc-a782-473549797b01",
+        "gatewayId": "GW-01",
+        "schemaVersion": "1.0",
+        "messageType": "telemetry"
+      },
+      "payload": {
+        "deviceId": "dev-1",
+        "time": "1970-01-01T00:00:00",
+        "uptime": "494",
+        "location": {
+          "latitude": "27.5002432",
+          "ns": "S",
+          "longitude": "153.0153600",
+          "ew": "E",
+          "altitude_m": "0.0"
+        },
+        "environment": {
+          "temperature_c": "26.22",
+          "humidity_percent": "69.00",
+          "pressure_hpa": "102.3",
+          "gas_ppm": "28.00"
+        },
+        "acceleration": {
+          "x_mps2": "2.413",
+          "y_mps2": "-0.459",
+          "z_mps2": "-6.511"
+        }
+      },
+      "signature": {
+        "alg": "HS256",
+        "keyId": "key-001",
+        "value": "FBDA00C64513C32B027DA202C4C0574E86CE9FE462C42B8BB3B7734380810DA8"
+      }
+    }
 
-        Args:
-            server_url: Endpoint to which JSON messages are sent.
-        """
-        self.server_url = server_url
+    server_url = os.getenv("LOCAL_SERVER_URL", "http://localhost:8000/api/telemetry/gateway/")
 
-    def post_json(self, payload: dict):
-        """
-        POST a JSON payload to the configured server.
+    headers = {
+        "Content-Type": "application/json",
+        "X-API-KEY": os.getenv("API_KEY")
+    }
 
-        Args:
-            payload: The dict to serialize as JSON.
-        """
-        try:
-            resp = requests.put(self.server_url, json=payload, timeout=5)
-            resp.raise_for_status()
+    try:
+        resp = requests.put(server_url, headers=headers, json=payload, timeout=5)
+        resp.raise_for_status()
 
-            logger.info("Posted JSON → %s [%d]", self.server_url, resp.status_code)
+        logger.info("Posted JSON → %s [%d]", server_url, resp.status_code)
 
-        except Exception as exc:
-            logger.error("Failed to POST JSON: %s", exc)
+    except Exception as exc:
+        logger.error("Failed to POST JSON: %s", exc)
 
