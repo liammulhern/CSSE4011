@@ -60,11 +60,9 @@ static int on_message_complete(struct http_parser *p) {
     body_buf[body_buf_len] = '\0';
     LOG_INF("Full JSON payload (%zu bytes)", body_buf_len);
 
-    /* parse and redraw your GUI */
+    /* parse and redraw GUI */
     parse_notifications(body_buf, body_buf_len);
-    #ifdef CONFIG_GUI
-    gui_show_notifications_screen();
-    #endif
+    gui_notify_notifications_update();
 
     return 0;
 }

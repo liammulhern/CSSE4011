@@ -40,9 +40,7 @@ static void handle_wifi_connect_result(struct net_mgmt_event_callback *cb)
     else
     {
         LOG_INF("Connected\n");
-        #ifdef CONFIG_GUI
-        gui_update_wifi_status(LV_SYMBOL_WIFI, SSID, "");
-        #endif
+        gui_notify_wifi_status(LV_SYMBOL_WIFI, SSID, "");
         k_sem_give(&wifi_connected);
     }
 }
@@ -59,16 +57,19 @@ static void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb)
 
         if (wifi_connection_retry_count < WIFI_RETRY_COUNT)
         {
+            gui_notify_wifi_status(LV_SYMBOL_WARNING, SSID, "Retrying...");
+
+            k_msleep(1000 * wifi_connection_retry_count); // Exponential backoff
+
             LOG_INF("Retrying connection (%d)\n", wifi_connection_retry_count);
+
             wifi_connect();
         }
     }
     else
     {
         LOG_INF("Disconnected\n");
-        #ifdef CONFIG_GUI
-        gui_update_wifi_status(LV_SYMBOL_WARNING, "<disconnected>", "");
-        #endif
+        gui_notify_wifi_status(LV_SYMBOL_WARNING, "N/A", "");
         k_sem_take(&wifi_connected, K_NO_WAIT);
     }
 }
@@ -231,22 +232,17 @@ void wifi_thread(void)
     wifi_init();
 
     while (1) {
-        #ifdef CONFIG_GUI
-        gui_update_wifi_status(LV_SYMBOL_WIFI, SSID, LV_SYMBOL_LOOP);
-        #endif
+        gui_notify_wifi_status(LV_SYMBOL_WIFI, SSID, LV_SYMBOL_LOOP);
+
         /* Perform an HTTP query to fetch notifications */
         int ret = http_query(API_HOST, "/api");
 
         if (ret < 0) {
             LOG_ERR("HTTP Query failed: %d", ret);
-            #ifdef CONFIG_GUI
-            gui_update_wifi_status(LV_SYMBOL_WIFI, SSID, LV_SYMBOL_WARNING);
-            #endif
+            gui_notify_wifi_status(LV_SYMBOL_WIFI, SSID, LV_SYMBOL_WARNING);
         } else {
             LOG_INF("HTTP Query successful");
-            #ifdef CONFIG_GUI
-            gui_update_wifi_status(LV_SYMBOL_WIFI, SSID, "");
-            #endif
+            gui_notify_wifi_status(LV_SYMBOL_WIFI, SSID, "");
         }
 
         /* Optionally, you can add a delay or other operations here */
