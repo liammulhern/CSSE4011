@@ -1,9 +1,9 @@
-#include <json.h>
+#include <my_json.h>
 #include <string.h>  // required for memcpy
 #include <stdio.h>   // for snprintf
 #include <ctype.h>
 
-#include <zephyr/data/json.h>
+// #include <zephyr/data/json.h>
 
 #include <zephyr/logging/log.h>
 #include <zephyr/logging/log_ctrl.h>

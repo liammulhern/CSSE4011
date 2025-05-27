@@ -9,7 +9,7 @@
 #include <zephyr/logging/log.h>
 
 #include <bluetooth.h>
-#include <json.h>
+#include <my_json.h>
 
 LOG_MODULE_REGISTER(bluetooth_module);
 
