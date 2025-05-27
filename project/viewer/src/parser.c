@@ -4,12 +4,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <parser.h>
+#include <haptics.h>
 
 LOG_MODULE_REGISTER(parser_module, LOG_LEVEL_DBG);
 
 /* Global array to hold parsed notifications */
 notification_t notifications[MAX_NOTIFICATIONS];
 size_t notification_count = 0;
+
+static char prev_ids[MAX_NOTIFICATIONS][MAX_ID_LEN];
+static size_t prev_count = 0;
 
 /* 1) Descriptor for a single notification object */
 static const struct json_obj_descr notif_descr[] = {
@@ -51,6 +55,32 @@ static const struct json_obj_descr arr_descr[] = {
     if (rc < 0) {
         LOG_ERR("JSON parse failed: %d\n", rc);
         return;
+    }
+
+    /* Check if we have any new notifications */
+    bool changed = false;
+
+    if (wrap.notifications_len != prev_count) {
+        changed = true;
+    } else {
+        for (size_t i = 0; i < wrap.notifications_len; i++) {
+            if (strcmp(wrap.notifications[i].id, prev_ids[i]) != 0) {
+                changed = true;
+                break;
+            }
+        }
+    }
+
+    /* vibrate 2 pulses of 100ms to alert user */
+    if (changed) {
+        haptic_motor_vibrate(2, 100);
+    }
+
+    /* save off this batch of IDs for next time */
+    prev_count = wrap.notifications_len;
+    for (size_t i = 0; i < prev_count; i++) {
+        strncpy(prev_ids[i], wrap.notifications[i].id, sizeof(prev_ids[i]) - 1);
+        prev_ids[i][sizeof(prev_ids[i]) - 1] = '\0';
     }
 
     /* Copy out and parse timestamps */

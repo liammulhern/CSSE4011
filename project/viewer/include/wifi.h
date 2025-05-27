@@ -1,7 +1,7 @@
 #ifndef WIFI_H_
 #define WIFI_H_
 
-#define WIFI_RETRY_COUNT 3
+#define WIFI_RETRY_COUNT 10
 
 void wifi_connect(void);
 

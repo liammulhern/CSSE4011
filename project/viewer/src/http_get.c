@@ -217,13 +217,20 @@ int http_get(int sock, char * hostname, char * url)
 
 int http_query(char * hostname, char * url) {
     int sock;
+    int ret;
 
     struct zsock_addrinfo *res;
-    nslookup(hostname, &res);
+    ret = nslookup(hostname, &res);
+
+    if (ret < 0) {
+        LOG_ERR("nslookup failed for %s: %d", hostname, ret);
+        return ret;
+    }
+
     print_addrinfo_results(&res);
 
     sock = connect_socket(&res, 3000);
-    int ret = http_get(sock, hostname, url);
+    ret = http_get(sock, hostname, url);
 
     if (ret < 0) {
         LOG_ERR("HTTP GET failed: %d", ret);

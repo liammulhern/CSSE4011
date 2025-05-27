@@ -1,0 +1,8 @@
+&wifi {
+    status = "okay";
+};
+
+&touch {
+    status = "okay";
+    compatible = "espressif,esp32-touch";
+};

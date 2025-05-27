@@ -4,7 +4,7 @@
 #include <zephyr/kernel.h>
 
 #define MAX_NOTIFICATIONS 5
-#define MAX_ID_LEN 36
+#define MAX_ID_LEN 10
 #define MAX_TYPE_LEN 16
 #define MAX_MESSAGE_LEN 128
 #define MAX_TIMESTAMP_LEN 21   /* "YYYY-MM-DDTHH:MM:SSZ" + '\0' */

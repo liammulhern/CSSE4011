@@ -17,6 +17,7 @@
 #include <gui.h>
 
 static uint8_t wifi_connection_retry_count = 0;
+static char wifi_rety_dots[WIFI_RETRY_COUNT + 1] = {0};
 
 static K_SEM_DEFINE(wifi_connected, 0, 1);
 static K_SEM_DEFINE(ipv4_address_obtained, 0, 1);
@@ -28,6 +29,8 @@ static struct net_mgmt_event_callback ipv4_cb;
 static struct net_mgmt_event_callback l4_cb;
 
 LOG_MODULE_REGISTER(wifi_module, LOG_LEVEL_INF);
+
+void wifi_connect_status(void);
 
 static void handle_wifi_connect_result(struct net_mgmt_event_callback *cb)
 {
@@ -53,11 +56,12 @@ static void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb)
     {
         LOG_ERR("Disconnection request (%d)\n", status->status);
 
+        wifi_rety_dots[wifi_connection_retry_count] = '.';
         wifi_connection_retry_count++;
 
         if (wifi_connection_retry_count < WIFI_RETRY_COUNT)
         {
-            gui_notify_wifi_status(LV_SYMBOL_WARNING, SSID, "Retrying...");
+            gui_notify_wifi_status(LV_SYMBOL_WARNING, SSID, wifi_rety_dots);
 
             k_msleep(1000 * wifi_connection_retry_count); // Exponential backoff
 
@@ -217,11 +221,6 @@ void wifi_init(void) {
     );
 
     net_mgmt_add_event_callback(&l4_cb);
-
-    wifi_connect();
-    k_sem_take(&wifi_connected, K_FOREVER);
-    wifi_status();
-    k_sem_take(&ipv4_address_obtained, K_FOREVER);
 }
 
 void wifi_thread(void)
@@ -230,6 +229,11 @@ void wifi_thread(void)
 
     /* Initialize the Wi-Fi interface */
     wifi_init();
+
+    wifi_connect();
+    k_sem_take(&wifi_connected, K_FOREVER);
+    wifi_status();
+    k_sem_take(&ipv4_address_obtained, K_FOREVER);
 
     while (1) {
         gui_notify_wifi_status(LV_SYMBOL_WIFI, SSID, LV_SYMBOL_LOOP);
