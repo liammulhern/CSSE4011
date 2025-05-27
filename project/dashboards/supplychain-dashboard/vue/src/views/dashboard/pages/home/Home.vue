@@ -11,6 +11,7 @@ import { DateRangePicker } from '@/components/ui/daterange-picker'
 import OrderStatusTable from '@/views/dashboard/pages/home/OrderStatusTable.vue'
 import LiveEventFeed from '@/views/dashboard/pages/home/LiveEventFeed.vue'
 import ComplianceAlerts from '@/views/dashboard/pages/home/ComplianceAlerts.vue'
+import RecentNotifications from '@/views/dashboard/pages/home/RecentNotifications.vue'
 import ProductEventMap from '@/components/maps/ProductEventMap.vue'
 
 // Pull in our ProductOrder store
@@ -41,9 +42,9 @@ onMounted(async () => {
   if (!auth.user) {
     await auth.fetchUser()
   }
-  // fetch summary for the last 24h by default
+  // fetch summary for the last week by default
   const now = new Date()
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+  const yesterday = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
   dateRange.value = { start: yesterday, end: now }
   orderStore.fetchSummary(yesterday, now.toISOString())
 })
@@ -91,7 +92,8 @@ watch(
             <CardContent>
               <div class="text-2xl font-bold">{{ totalOrders }}</div>
               <p class="text-xs text-muted-foreground">
-                {{ totalOrdersDelta >= 0 ? '+' : '' }}{{ totalOrdersDelta }} since start
+                {{ totalOrdersDelta >= 0 ? '+' : '' }} {{ totalOrdersDelta }} since {{ dateRange.start ?
+                  dateRange.start.toLocaleDateString() : 'start' }}
               </p>
             </CardContent>
           </Card>
@@ -106,7 +108,8 @@ watch(
             <CardContent>
               <div class="text-2xl font-bold">{{ inTransitOrders }}</div>
               <p class="text-xs text-muted-foreground">
-                {{ inTransitOrdersDelta >= 0 ? '+' : '' }}{{ inTransitOrdersDelta }} since start
+                {{ inTransitOrdersDelta >= 0 ? '+' : '' }} {{ inTransitOrdersDelta }} since {{ dateRange.start ?
+                  dateRange.start.toLocaleDateString() : 'start' }}
               </p>
             </CardContent>
           </Card>
@@ -121,7 +124,8 @@ watch(
             <CardContent>
               <div class="text-2xl font-bold">{{ deliveredOrders }}</div>
               <p class="text-xs text-muted-foreground">
-                {{ deliveredOrdersDelta >= 0 ? '+' : '' }}{{ deliveredOrdersDelta }} since start
+                {{ deliveredOrdersDelta >= 0 ? '+' : '' }} {{ deliveredOrdersDelta }} since {{ dateRange.start ?
+                  dateRange.start.toLocaleDateString() : 'start' }}
               </p>
             </CardContent>
           </Card>
@@ -136,17 +140,28 @@ watch(
             <CardContent>
               <div class="text-2xl font-bold">{{ complianceAlerts }}</div>
               <p class="text-xs text-muted-foreground">
-                {{ complianceAlertsDelta >= 0 ? '+' : '' }}{{ complianceAlertsDelta }} since start
+                {{ complianceAlertsDelta >= 0 ? '+' : '' }} {{ complianceAlertsDelta }} since {{ dateRange.start ?
+                  dateRange.start.toLocaleDateString() : 'start' }}
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <Card>
-          <CardContent>
-            <OrderStatusTable :limit="5" />
-          </CardContent>
-        </Card>
+        <div class="grid gap-4 md:grid-cols-1 lg:grid-cols-4">
+
+          <Card class="col-span-1 lg:col-span-3">
+            <CardContent>
+              <OrderStatusTable tableName="Recent Product Orders" :limit="5" />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent>
+              <RecentNotifications />
+            </CardContent>
+          </Card>
+        </div>
+
       </TabsContent>
 
       <!-- EVENTS: live feed + alerts -->

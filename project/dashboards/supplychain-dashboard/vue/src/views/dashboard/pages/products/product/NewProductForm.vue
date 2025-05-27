@@ -101,9 +101,11 @@ function toggleForm() {
         </FormField>
 
         <div class="flex justify-end space-x-2">
-          <Button variant="secondary" type="button" @click="toggleForm">
-            Cancel
-          </Button>
+          <DialogClose asChild>
+            <Button variant="secondary" type="button" @click="toggleForm">
+              Cancel
+            </Button>
+          </DialogClose>
           <Button type="submit">
             Create
           </Button>

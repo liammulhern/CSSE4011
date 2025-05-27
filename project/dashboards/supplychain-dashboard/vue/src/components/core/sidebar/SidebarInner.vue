@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { Toggle } from '@/components/ui/toggle';
+import { Toggle } from '@/components/ui/toggle'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger
-} from '@/components/ui/tooltip';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import router from '@/router';
-import { computed } from 'vue';
-import { useRoute } from 'vue-router';
-import { APP_MENU } from '@/config/app';
-import { ArrowLeftToLine } from 'lucide-vue-next';
-import { useAppStore } from '@/stores/app';
+} from '@/components/ui/tooltip'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import router from '@/router'
+import { computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { APP_MENU } from '@/config/app'
+import { ArrowLeftToLine } from 'lucide-vue-next'
+import { useAppStore } from '@/stores/app'
+import CompanyPicker from '@/components/core/CompanyPicker.vue'
 
 const route = useRoute()
+const store = useAppStore()
 
 const menus = computed(() => Object.entries(APP_MENU).map(([key, value]) => ({
   key,
@@ -24,22 +26,16 @@ const menus = computed(() => Object.entries(APP_MENU).map(([key, value]) => ({
     ...r,
     active: `/dashboard/${r.path}` === route.path,
   })),
-})
-));
+})))
 
 const handleNavigate = (path: string) => {
-  router.push(`/dashboard/${path}`);
-
-  if (window.innerWidth < 1025) {
-    store.toggleSidebar();
-  }
-};
-
-const store = useAppStore();
+  router.push(`/dashboard/${path}`)
+  if (window.innerWidth < 1025) store.toggleSidebar()
+}
 
 const toggleSidebar = () => {
-  store.toggleSidebar();
-};
+  store.toggleSidebar()
+}
 </script>
 
 <template>
@@ -47,14 +43,17 @@ const toggleSidebar = () => {
     :style="{ width: `${store.wrapperWidth}px` }">
     <div class="relative h-full flex flex-col justify-between">
       <div>
+        <!-- Header with logo and collapse button -->
         <div class="h-[64px]">
           <div class="px-4 h-[64px] flex fixed z-10 items-center justify-between border-b-[1px]"
             :style="{ width: `${store.sidebarExpanded ? 280 : 64}px` }">
             <transition name="fade">
               <h2 v-show="store.sidebarExpanded" class="text-2xl text-primary font-semibold flex items-center">
-                <span class="text-primary"><span class="mr-2 flex items-center">
+                <span class="text-primary">
+                  <span class="mr-2 flex items-center">
                     <Icon name="Package" />
-                  </span></span>
+                  </span>
+                </span>
                 PathLedger
               </h2>
             </transition>
@@ -65,7 +64,15 @@ const toggleSidebar = () => {
             </Button>
           </div>
         </div>
-        <ScrollArea style="height: calc(100vh - 64px)">
+
+        <!-- Company picker below header -->
+        <div class="flex flex-col justify-between transition-all duration-300"
+          :class="store.sidebarExpanded ? 'p-4' : 'p-2'">
+          <CompanyPicker />
+        </div>
+
+        <!-- Navigation menu -->
+        <ScrollArea style="height: calc(100vh - 160px)">
           <div v-for="menu in menus" :key="menu.key" class="border-b-[1px] transition-all"
             :class="store.sidebarExpanded ? 'p-4' : 'p-2'">
             <p v-show="store.sidebarExpanded"
@@ -85,7 +92,7 @@ const toggleSidebar = () => {
                           <Icon :name="child.icon" />
                         </span>
                         <transition name="fade" :duration="300">
-                          <span v-show="store.sidebarExpand">{{ child.title }}</span>
+                          <span v-show="store.sidebarExpanded">{{ child.title }}</span>
                         </transition>
                       </Toggle>
                     </TooltipTrigger>
@@ -101,9 +108,11 @@ const toggleSidebar = () => {
           </div>
         </ScrollArea>
       </div>
+
+      <!-- Footer -->
       <div class="border-t-[1px] transition-all duration-400 py-4"
         :class="store.sidebarExpanded ? 'opacity-100' : 'opacity-0'">
-        <p class="text-xs text-foreground/50 text-center">&copy; 2024 Dashcn</p>
+        <p class="text-xs text-foreground/50 text-center">© 2024 PathLedger</p>
       </div>
     </div>
   </div>

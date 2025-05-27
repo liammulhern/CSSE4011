@@ -56,6 +56,10 @@ const onSubmit = handleSubmit(async (vals) => {
   showForm.value = false
   router.push({ name: 'product_order_id', params: { id: String(created.id) } })
 })
+
+function toggleForm() {
+  showForm.value = !showForm.value
+}
 </script>
 
 <template>

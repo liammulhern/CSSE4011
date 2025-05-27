@@ -21,6 +21,12 @@ export const APP_MENU: Record<string, { name: string, routes: IDashboardMenus[] 
         title: 'Products',
         icon: 'Package',
         path: 'products',
+        description: 'Manage Manufactured Products'
+      },
+      {
+        title: 'Product Types',
+        icon: 'Layers',
+        path: 'product_types',
         description: 'Manage Product Catalog'
       },
       {

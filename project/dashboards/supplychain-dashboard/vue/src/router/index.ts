@@ -62,7 +62,23 @@ const router = createRouter({
             hasQRAuth: true
           },
         },
-
+        {
+          path: 'product_types',
+          name: 'product_types_index',
+          component: () => import('@/views/dashboard/pages/product_types/Index.vue'),
+          meta: {
+            title: 'Catalog',
+          } as RouteMeta & IRouteMeta,
+        },
+        {
+          path: 'product_types/:id',
+          component: () => import('@/views/dashboard/pages/product_types/type/Index.vue'),
+          name: 'product_type_index',
+          meta: {
+            title: 'Type',
+            hasQRAuth: true
+          },
+        },
         {
           path: 'product_orders',
           name: 'product_orders_index',
@@ -73,7 +89,7 @@ const router = createRouter({
         },
         {
           path: 'product_orders/:id',
-          name: 'product_order_id',
+          name: 'product_order_index',
           component: () => import('@/views/dashboard/pages/product_orders/order/Index.vue'),
           meta: {
             title: 'Order',
