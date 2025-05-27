@@ -7,6 +7,8 @@
 #include <parser.h>
 #include <lvgl.h>
 
+#define CONFIG_GUI
+
 int gui_init();
 
 void gui_thread(void);

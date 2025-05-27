@@ -11,10 +11,12 @@
 #include <zephyr/net/net_event.h>
 #include <zephyr/logging/log.h>
 #include <errno.h>
+#include <wifi.h>
 #include <http_get.h>
 #include <env.h>
 #include <gui.h>
 
+static uint8_t wifi_connection_retry_count = 0;
 
 static K_SEM_DEFINE(wifi_connected, 0, 1);
 static K_SEM_DEFINE(ipv4_address_obtained, 0, 1);
@@ -51,11 +53,19 @@ static void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb)
 
     if (status->status)
     {
-        printk("Disconnection request (%d)\n", status->status);
+        LOG_ERR("Disconnection request (%d)\n", status->status);
+
+        wifi_connection_retry_count++;
+
+        if (wifi_connection_retry_count < WIFI_RETRY_COUNT)
+        {
+            LOG_INF("Retrying connection (%d)\n", wifi_connection_retry_count);
+            wifi_connect();
+        }
     }
     else
     {
-        printk("Disconnected\n");
+        LOG_INF("Disconnected\n");
         #ifdef CONFIG_GUI
         gui_update_wifi_status(LV_SYMBOL_WARNING, "<disconnected>", "");
         #endif
@@ -160,17 +170,15 @@ void wifi_status(void)
 
     if (net_mgmt(NET_REQUEST_WIFI_IFACE_STATUS, iface, &status,	sizeof(struct wifi_iface_status)))
     {
-        printk("WiFi Status Request Failed\n");
+        LOG_ERR("WiFi Status Request Failed\n");
     }
 
-    printk("\n");
-
     if (status.state >= WIFI_STATE_ASSOCIATED) {
-        printk("SSID: %-32s\n", status.ssid);
-        printk("Band: %s\n", wifi_band_txt(status.band));
-        printk("Channel: %d\n", status.channel);
-        printk("Security: %s\n", wifi_security_txt(status.security));
-        printk("RSSI: %d\n", status.rssi);
+        LOG_DBG("SSID: %-32s\n", status.ssid);
+        LOG_DBG("Band: %s\n", wifi_band_txt(status.band));
+        LOG_DBG("Channel: %d\n", status.channel);
+        LOG_DBG("Security: %s\n", wifi_security_txt(status.security));
+        LOG_DBG("RSSI: %d\n", status.rssi);
     }
 }
 
@@ -180,7 +188,7 @@ void wifi_disconnect(void)
 
     if (net_mgmt(NET_REQUEST_WIFI_DISCONNECT, iface, NULL, 0))
     {
-        printk("WiFi Disconnection Request Failed\n");
+        LOG_ERR("WiFi Disconnection Request Failed\n");
     }
 }
 

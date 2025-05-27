@@ -60,4 +60,4 @@ int main(void)
 K_THREAD_DEFINE(gui_tid, GUI_THREAD_STACK_SIZE, gui_thread, NULL, NULL, NULL, GUI_THREAD_PRIORITY, 0, 0);
 #endif
 
-K_THREAD_DEFINE(wifi_tid, 4096, wifi_thread, NULL, NULL, NULL, GUI_THREAD_PRIORITY, 0, 0);
+K_THREAD_DEFINE(wifi_tid, 6000, wifi_thread, NULL, NULL, NULL, GUI_THREAD_PRIORITY, 0, 0);

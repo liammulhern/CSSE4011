@@ -2,17 +2,16 @@
 #include <zephyr/kernel.h>
 #include <zephyr/net/http/client.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/net/http/client.h>
+#include <zephyr/net/http/parser.h>
 #include <env.h>
 #include <parser.h>
 #include <gui.h>
 
 #define REQUEST_SIZE 2048
+#define BODY_BUF_SIZE 2048
 
-static uint8_t recv_buf[512];
-
-/* http accumulator and its current length */
-static char    full_body[REQUEST_SIZE];
-static size_t  full_body_len;
+static uint8_t recv_buf[1024];
 
 LOG_MODULE_REGISTER(http_module, LOG_LEVEL_DBG);
 
@@ -22,6 +21,68 @@ static const char *http_headers[] = {
     "Content-Length: 0\r\n",
     NULL
 };
+
+/*  Parser state + settings */
+static struct http_parser parser;
+static struct http_parser_settings parser_settings;
+
+/* Body accumulator */
+static char body_buf[BODY_BUF_SIZE];
+static size_t body_buf_len;
+
+/* Called at the start of each message */
+static int on_message_begin(struct http_parser *p) {
+    ARG_UNUSED(p);
+    body_buf_len = 0;
+    return 0;
+}
+
+/* We don’t need URL, status or headers here, so leave them NULL */
+/* Accumulate each body chunk into body_buf[] */
+static int on_body(struct http_parser *p, const char *at, size_t length) {
+    ARG_UNUSED(p);
+
+    if (body_buf_len + length < BODY_BUF_SIZE - 1) {
+        memcpy(body_buf + body_buf_len, at, length);
+        body_buf_len += length;
+    } else {
+        LOG_ERR("Body too large (%zu + %zu > %zu)",
+                body_buf_len, length, sizeof(body_buf));
+        return -1;
+    }
+
+    return 0;
+}
+
+/* When the full message is done, NUL‐terminate and hand off */
+static int on_message_complete(struct http_parser *p) {
+    ARG_UNUSED(p);
+    body_buf[body_buf_len] = '\0';
+    LOG_INF("Full JSON payload (%zu bytes)", body_buf_len);
+
+    /* parse and redraw your GUI */
+    parse_notifications(body_buf, body_buf_len);
+    #ifdef CONFIG_GUI
+    gui_show_notifications_screen();
+    #endif
+
+    return 0;
+}
+
+static int parser_init_once(void)
+{
+    http_parser_init(&parser, HTTP_RESPONSE);
+    http_parser_settings_init(&parser_settings);
+
+    parser_settings.on_message_begin = on_message_begin;
+    parser_settings.on_body = on_body;
+    parser_settings.on_message_complete = on_message_complete;
+
+    return 0;
+}
+
+/* Call this at startup, once */
+SYS_INIT(parser_init_once, APPLICATION, CONFIG_APPLICATION_INIT_PRIORITY);
 
 int nslookup(const char * hostname, struct zsock_addrinfo **results)
 {
@@ -121,32 +182,11 @@ static int http_response_cb(struct http_response *rsp,
 {
     ARG_UNUSED(user_data);
 
-    /* copy this chunk into full_body[] */
-    if (rsp->data_len > 0) {
-        if (full_body_len + rsp->data_len < sizeof(full_body) - 1) {
-            memcpy(full_body + full_body_len,
-                   rsp->recv_buf,
-                   rsp->data_len);
-
-            full_body_len += rsp->data_len;
-        } else {
-            LOG_ERR("Response too large to fit buffer");
-            return -ENOMEM;
-        }
-    }
-
-    if (final_data == HTTP_DATA_FINAL) {
-        /* NUL-terminate and hand off to your JSON parser */
-        full_body[full_body_len] = '\0';
-        LOG_INF("Full JSON payload (%zu bytes):\n%s", full_body_len, full_body);
-
-        /* now parse into your notification_t array */
-        parse_notifications(full_body, full_body_len);
-
-        /* and finally, refresh your GUI */
-        #ifdef CONFIG_GUI
-        gui_show_notifications_screen();
-        #endif
+     if (rsp->data_len > 0) {
+        http_parser_execute(&parser,
+                            &parser_settings,
+                            (const char *)rsp->recv_buf,
+                            rsp->data_len);
     }
 
     return 0;
