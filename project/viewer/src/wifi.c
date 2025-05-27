@@ -13,11 +13,13 @@
 #include <http_get.h>
 #include <ping.h>
 
-#define SSID "AndroidAP-Pixel 6"
-#define PSK "0d4b60b34353"
+#define SSID "TelstraB77B91"
+#define PSK "k9nh6anah5"
 
 static K_SEM_DEFINE(wifi_connected, 0, 1);
 static K_SEM_DEFINE(ipv4_address_obtained, 0, 1);
+
+static bool got_ipv4 = false;
 
 static struct net_mgmt_event_callback wifi_cb;
 static struct net_mgmt_event_callback ipv4_cb;
@@ -55,6 +57,10 @@ static void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb)
 
 static void handle_ipv4_result(struct net_if *iface)
 {
+    if (got_ipv4) {
+        return;
+    }
+    got_ipv4 = true;
     printk("Event result\n");
 
     struct net_if_config *cfg = net_if_get_config(iface);
@@ -92,8 +98,10 @@ static void handle_ipv4_result(struct net_if *iface)
         printk("Router: %s\n", buf);
 
         k_sem_give(&ipv4_address_obtained);
-        return;
+        break;
     }
+
+    net_mgmt_del_event_callback(&ipv4_cb);
 }
 
 
@@ -213,12 +221,12 @@ int main(void)
 
     printk("\nLooking up IP addresses:\n");
     struct zsock_addrinfo *res;
-    nslookup("pathledger.live", &res);
+    nslookup("iot.beyondlogic.org", &res);
     print_addrinfo_results(&res);
 
     printk("\nConnecting to HTTP Server:\n");
     sock = connect_socket(&res, 80);
-    http_get(sock, "pathledger.live", "/");
+    http_get(sock, "iot.beyondlogic.org", "/LoremIpsum.txt");
     zsock_close(sock);
 
     // Stay connected for 30 seconds, then disconnect.

@@ -111,15 +111,20 @@ static int http_response_cb(struct http_response *rsp,
             void *user_data)
 {
     if (final_data == HTTP_DATA_MORE) {
-        //printk("Partial data received (%zd bytes)\n", rsp->data_len);
+        printk("Partial data received (%zd bytes)\n", rsp->data_len);
     } else if (final_data == HTTP_DATA_FINAL) {
-        //printk("All the data received (%zd bytes)\n", rsp->data_len);
+        printk("All the data received (%zd bytes)\n", rsp->data_len);
     }
 
-    //printk("Bytes Recv %zd\n", rsp->data_len);
-    //printk("Response status %s\n", rsp->http_status);
-    //printk("Recv Buffer Length %zd\n", rsp->recv_buf_len);
-    printk("%.*s", rsp->data_len, rsp->recv_buf);
+    printk("Bytes Recv %zd\n", rsp->data_len);
+    printk("Response status %s\n", rsp->http_status);
+    printk("Recv Buffer Length %zd\n", rsp->recv_buf_len);
+
+    // rsp->recv_buf[rsp->recv_buf_len] = '\0';  // Null-terminate the buffer
+    //
+    // printk("%s", rsp->recv_buf); 
+
+    return 0;
 }
 
 void http_get(int sock, char * hostname, char * url)
@@ -135,6 +140,8 @@ void http_get(int sock, char * hostname, char * url)
     req.response = http_response_cb;
     req.recv_buf = recv_buf;
     req.recv_buf_len = sizeof(recv_buf);
+
+    printk("HTTP Request: %s %s %s\n", req.method == HTTP_GET ? "GET" : "POST", req.url, req.protocol);
 
     /* sock is a file descriptor referencing a socket that has been connected
     * to the HTTP server.
