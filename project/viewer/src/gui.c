@@ -1,77 +1,132 @@
+#include "font/lv_symbol_def.h"
+#include <string.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/display.h>
+#include <parser.h>
 
-#include "display/lv_display.h"
+#include <display/lv_display.h>
 
 #include <lvgl.h>
 
-/** Number of rows in the grid. */
-#define GRID_ROWS      40
-/** Number of columns in the grid. */
-#define GRID_COLS      30
-/** Pixel size of each grid cell. */
-#define CELL_SIZE      20
-/** X offset of grid from the left edge of the screen. */
-#define GRID_OFFSET_X  0
-/** Y offset of grid from the top of the screen. */
-#define GRID_OFFSET_Y  0
-/** Color for axis lines and labels. */
-#define AXIS_COLOR    lv_color_make(255, 255, 255)
-/** Major axis line width. */
-#define AXIS_WIDTH     1
-
-/** Color of the marker (LVGL color). */
-#define MARKER_COLOR lv_color_make(255, 0, 0)
-
-/** LVGL chart object representing the scatter grid. */
-static lv_obj_t *chart;
-/** Series handle for the marker point. */
-static lv_chart_series_t *marker_ser;
-
 LOG_MODULE_REGISTER(gui_module, LOG_LEVEL_INF);
 
-/**
- * @brief Create an 8×8 scatter-mode chart as the grid.
- * @param parent The parent LVGL object (e.g., current screen).
- *
- * Sets up a chart sized GRID_COLS×CELL_SIZE by GRID_ROWS×CELL_SIZE,
- * enables scatter mode, draws division lines for the grid, and
- * adds a single-point series for the marker.
- */
-static void gui_create_scatter_grid(lv_obj_t *parent)
+/* Card styling constants */
+#define CARD_MARGIN        8
+#define CARD_PADDING       6
+#define CARD_RADIUS        5
+#define CARD_BORDER_WIDTH  1
+
+static lv_obj_t *wifi_lbl;
+
+static void create_notification_card(lv_obj_t *parent,
+                                     const notification_t *n)
 {
-    /* 1) Chart setup */
-    chart = lv_chart_create(parent);
-    lv_obj_set_size(chart, LV_HOR_RES, LV_VER_RES);
-    lv_obj_set_pos(chart, GRID_OFFSET_X, GRID_OFFSET_Y);
-    lv_chart_set_type(chart, LV_CHART_TYPE_SCATTER);
-    lv_chart_set_update_mode(chart, LV_CHART_UPDATE_MODE_CIRCULAR);
+    /* 1) Create the “card” container */
+    lv_obj_t *card = lv_obj_create(parent);
+    /* clear default style if you want a clean slate */
+    lv_obj_remove_style_all(card);
+    lv_obj_set_size(card, lv_pct(100), LV_SIZE_CONTENT);
 
-    lv_chart_set_axis_range(chart, LV_CHART_AXIS_PRIMARY_X, 0, GRID_COLS);
-    lv_chart_set_axis_range(chart, LV_CHART_AXIS_PRIMARY_Y, 0, GRID_ROWS);
+    /* 2) Apply style: radius, padding, border, bg, margin */
+    lv_obj_set_style_radius(card, CARD_RADIUS, 0);
+    lv_obj_set_style_pad_all(card, CARD_PADDING, 0);
+    lv_obj_set_style_border_width(card, CARD_BORDER_WIDTH, 0);
+    lv_obj_set_style_border_color(card, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_set_style_bg_color(card, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_margin_all(card, CARD_MARGIN, 0);
 
-    lv_chart_set_point_count(chart, 2);
+    /* 3) Set up a vertical flex layout */
+    lv_obj_set_layout(card, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(card,
+                          LV_FLEX_ALIGN_START,  /* main-axis align */
+                          LV_FLEX_ALIGN_START,  /* cross-axis align */
+                          LV_FLEX_ALIGN_START); /* track align */
 
-    lv_chart_set_div_line_count(chart, GRID_COLS / 5, GRID_ROWS / 5);
+    /* 4) Add the “type” label */
+    lv_obj_t *type_lbl = lv_label_create(card);
 
-    marker_ser = lv_chart_add_series(chart, MARKER_COLOR, LV_CHART_AXIS_PRIMARY_Y);
+    if (strcmp(n->type, "info") == 0) {
+        lv_label_set_text_fmt(type_lbl, "%s [%s]" , LV_SYMBOL_BELL, n->type);
+    } else if (strcmp(n->type, "warning") == 0) {
+        lv_label_set_text_fmt(type_lbl, "%s [%s]" , LV_SYMBOL_WARNING, n->type);
+        lv_obj_set_style_text_color(type_lbl, lv_color_hex(0xFFC107), 0); // yellow
+    } else if (strcmp(n->type, "alert") == 0) {
+        lv_label_set_text_fmt(type_lbl, "%s [%s]" , LV_SYMBOL_WARNING, n->type);
+        lv_obj_set_style_text_color(type_lbl, lv_color_hex(0xDC3545), 0); // red
+    } else {
+        lv_label_set_text_fmt(type_lbl, "[%s]" , n->type);
+        lv_obj_set_style_text_color(type_lbl, lv_color_hex(0x6C757D), 0); // gray
+    }
+
+    /* 5) Add the “message” label (wrapping) */
+    lv_obj_t *msg_lbl = lv_label_create(card);
+
+    lv_label_set_long_mode(msg_lbl, LV_LABEL_LONG_WRAP);
+
+    lv_obj_set_width(msg_lbl, lv_pct(100));
+
+    lv_label_set_text(msg_lbl, n->message);
+
+    /* 6) Add the “timestamp” */
+    lv_obj_t *ts_lbl = lv_label_create(card);
+    lv_label_set_text(ts_lbl, n->timestamp);
 }
 
-/**
- * @brief Plot or move the marker at given grid coordinates.
- * @param col Column index (0-based) within the 8×8 grid.
- * @param row Row index (0-based) within the 8×8 grid.
- *
- * Internally, sets the marker point to (col+0.5, row+0.5) so that
- * the circle is centered in the grid cell.
- */
-void gui_draw_localisation_position(double col, double row) { 
-    lv_chart_set_next_value2(chart, marker_ser, row*10, col*10);
-    lv_chart_refresh(chart);
+void gui_update_wifi_status(const char *symbol, const char *status, const char *activity)
+{
+    if (wifi_lbl) {
+        lv_label_set_text_fmt(wifi_lbl, "%s Network: %s %s", symbol, status, activity);
+    } else {
+        LOG_ERR("WiFi label not initialized");
+    }
 }
+
+void gui_show_notifications_screen()
+{
+    /* 1) Get the base screen and clear it */
+    lv_obj_t *scr = lv_scr_act();
+    lv_obj_clean(scr);
+
+    /* create a network‐status label at the very top */
+    wifi_lbl = lv_label_create(scr);
+    gui_update_wifi_status(LV_SYMBOL_WIFI, "<disconnected>", "");
+    lv_obj_set_width(wifi_lbl, LV_PCT(100));          /* span full width */
+    lv_obj_set_style_text_align(wifi_lbl, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(wifi_lbl, LV_ALIGN_TOP_MID, 0, 8);    /* y=8px from top */
+
+    /* 2) Create a plain container to hold everything */
+    lv_obj_t *scrl = lv_obj_create(scr);
+
+    /* 3) Make it full-screen */
+    lv_obj_set_size(scrl, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_y(scrl, 32);
+
+    /* 4) Enable vertical scrolling + auto-hiding scrollbar */
+    lv_obj_set_scroll_dir(scrl, LV_DIR_VER);
+    lv_obj_set_scrollbar_mode(scrl, LV_SCROLLBAR_MODE_AUTO);
+
+    /* 5) Optional: remove its default padding/background if you want “bare” */
+    lv_obj_set_style_bg_opa(scrl, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(scrl, 0, 0);
+
+    /* 6) Turn on flex layout so cards stack top→down */
+    lv_obj_set_layout(scrl, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(scrl, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(scrl,
+                          LV_FLEX_ALIGN_START, /* main axis */
+                          LV_FLEX_ALIGN_START, /* cross axis */
+                          LV_FLEX_ALIGN_START);/* track align */
+
+    /* 7) Add one “card” per notification */
+    for (size_t i = 0; i < notification_count; i++) {
+        create_notification_card(scrl, &notifications[i]);
+    }
+}
+
 
 int gui_init() {
     const struct device *display_dev;
@@ -82,9 +137,6 @@ int gui_init() {
         LOG_ERR("Device not ready, aborting test");
         return -ENODEV;
     }
-
-    lv_obj_t *scr = lv_screen_active();
-    gui_create_scatter_grid(scr);
 
     lv_timer_handler();
     display_blanking_off(display_dev);

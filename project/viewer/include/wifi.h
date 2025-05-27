@@ -3,5 +3,7 @@
 
 void wifi_init(void);
 
+void wifi_thread(void);
+
 #endif // WIFI_H_
 

@@ -9,12 +9,12 @@
 #include <zephyr/net/net_if.h>
 #include <zephyr/net/wifi_mgmt.h>
 #include <zephyr/net/net_event.h>
+#include <zephyr/logging/log.h>
 #include <errno.h>
 #include <http_get.h>
-#include <ping.h>
+#include <env.h>
+#include <gui.h>
 
-#define SSID "TelstraB77B91"
-#define PSK "k9nh6anah5"
 
 static K_SEM_DEFINE(wifi_connected, 0, 1);
 static K_SEM_DEFINE(ipv4_address_obtained, 0, 1);
@@ -25,17 +25,22 @@ static struct net_mgmt_event_callback wifi_cb;
 static struct net_mgmt_event_callback ipv4_cb;
 static struct net_mgmt_event_callback l4_cb;
 
+LOG_MODULE_REGISTER(wifi_module, LOG_LEVEL_INF);
+
 static void handle_wifi_connect_result(struct net_mgmt_event_callback *cb)
 {
     const struct wifi_status *status = (const struct wifi_status *)cb->info;
 
     if (status->status)
     {
-        printk("Connection request failed (%d)\n", status->status);
+        LOG_ERR("Connection request failed (%d)\n", status->status);
     }
     else
     {
-        printk("Connected\n");
+        LOG_INF("Connected\n");
+        #ifdef CONFIG_GUI
+        gui_update_wifi_status(LV_SYMBOL_WIFI, SSID, "");
+        #endif
         k_sem_give(&wifi_connected);
     }
 }
@@ -51,6 +56,9 @@ static void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb)
     else
     {
         printk("Disconnected\n");
+        #ifdef CONFIG_GUI
+        gui_update_wifi_status(LV_SYMBOL_WARNING, "<disconnected>", "");
+        #endif
         k_sem_take(&wifi_connected, K_NO_WAIT);
     }
 }
@@ -60,19 +68,14 @@ static void handle_ipv4_result(struct net_if *iface)
     if (got_ipv4) {
         return;
     }
-    got_ipv4 = true;
-    printk("Event result\n");
 
     struct net_if_config *cfg = net_if_get_config(iface);
     struct net_if_ipv4  *ipv4 = cfg->ip.ipv4;
     char buf[NET_IPV4_ADDR_LEN];
     int i;
 
-    printk("\nIPv4 Address Information:\n");
-
     for (i = 0; i < NET_IF_MAX_IPV4_ADDR; i++) {
         const struct net_if_addr_ipv4 *u = &ipv4->unicast[i];
-        printk("Entry %d:\n", i);
 
         /* look only for the DHCP‐assigned address */
         if (u->ipv4.addr_type != NET_ADDR_DHCP) {
@@ -83,31 +86,27 @@ static void handle_ipv4_result(struct net_if *iface)
         net_addr_ntop(AF_INET,
                       &u->ipv4.address.in_addr,
                       buf, sizeof(buf));
-        printk("IPv4 address: %s\n", buf);
 
         /* print the subnet mask (now per‐entry) */
         net_addr_ntop(AF_INET,
                       &u->netmask,
                       buf, sizeof(buf));
-        printk("Subnet: %s\n", buf);
 
         /* print the router/gateway */
         net_addr_ntop(AF_INET,
                       &ipv4->gw,
                       buf, sizeof(buf));
-        printk("Router: %s\n", buf);
 
         k_sem_give(&ipv4_address_obtained);
+        got_ipv4 = true;
+        net_mgmt_del_event_callback(&ipv4_cb);
         break;
     }
-
-    net_mgmt_del_event_callback(&ipv4_cb);
 }
 
 
 static void wifi_mgmt_event_handler(struct net_mgmt_event_callback *cb, uint32_t mgmt_event, struct net_if *iface)
 {
-    printk("Event: %u\n", mgmt_event);
     switch (mgmt_event)
     {
 
@@ -145,11 +144,11 @@ void wifi_connect(void)
     wifi_params.band = WIFI_FREQ_BAND_2_4_GHZ; 
     wifi_params.mfp = WIFI_MFP_OPTIONAL;
 
-    printk("Connecting to SSID: %s\n", wifi_params.ssid);
+    LOG_DBG("Connecting to SSID: %s\n", wifi_params.ssid);
 
     if (net_mgmt(NET_REQUEST_WIFI_CONNECT, iface, &wifi_params, sizeof(struct wifi_connect_req_params)))
     {
-        printk("WiFi Connection Request Failed\n");
+        LOG_ERR("WiFi Connection Request Failed\n");
     }
 }
 
@@ -185,12 +184,7 @@ void wifi_disconnect(void)
     }
 }
 
-int main(void)
-{
-    int sock;
-
-    printk("WiFi Example\nBoard: %s\n", CONFIG_BOARD);
-
+void wifi_init(void) {
     /* Layer-2 Wi-Fi events */
     net_mgmt_init_event_callback(&wifi_cb,
         wifi_mgmt_event_handler,
@@ -213,25 +207,43 @@ int main(void)
         NET_EVENT_L4_CONNECTED
     );
 
-    net_mgmt_add_event_callback(&l4_cb);    wifi_connect();
+    net_mgmt_add_event_callback(&l4_cb);
+
+    wifi_connect();
     k_sem_take(&wifi_connected, K_FOREVER);
     wifi_status();
     k_sem_take(&ipv4_address_obtained, K_FOREVER);
-    printk("Ready...\n\n");
+}
 
-    printk("\nLooking up IP addresses:\n");
-    struct zsock_addrinfo *res;
-    nslookup("iot.beyondlogic.org", &res);
-    print_addrinfo_results(&res);
+void wifi_thread(void)
+{
+    LOG_INF("WiFi Thread started");
 
-    printk("\nConnecting to HTTP Server:\n");
-    sock = connect_socket(&res, 80);
-    http_get(sock, "iot.beyondlogic.org", "/LoremIpsum.txt");
-    zsock_close(sock);
+    /* Initialize the Wi-Fi interface */
+    wifi_init();
 
-    // Stay connected for 30 seconds, then disconnect.
-    //k_sleep(K_SECONDS(30));    
-    //wifi_disconnect();
+    while (1) {
+        #ifdef CONFIG_GUI
+        gui_update_wifi_status(LV_SYMBOL_WIFI, SSID, LV_SYMBOL_LOOP);
+        #endif
+        /* Perform an HTTP query to fetch notifications */
+        int ret = http_query(API_HOST, "/api");
 
-    return(0);
+        if (ret < 0) {
+            LOG_ERR("HTTP Query failed: %d", ret);
+            #ifdef CONFIG_GUI
+            gui_update_wifi_status(LV_SYMBOL_WIFI, SSID, LV_SYMBOL_WARNING);
+            #endif
+        } else {
+            LOG_INF("HTTP Query successful");
+            #ifdef CONFIG_GUI
+            gui_update_wifi_status(LV_SYMBOL_WIFI, SSID, "");
+            #endif
+        }
+
+        /* Optionally, you can add a delay or other operations here */
+        k_msleep(10000);
+    }
+
+    LOG_INF("WiFi Thread finished");
 }
