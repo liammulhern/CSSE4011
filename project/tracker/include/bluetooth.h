@@ -36,25 +36,6 @@ struct sensor_blk {
     int16_t z_accel; //
 };
 
-// // THIS WILL BE REMOVED AND INCLUDED IN ACTUAL FILE SET UP
-// // -----------------------------------------------------------------
-// struct sensor_blk {
-//     uint32_t timestamp;
-//     float lat;
-//     char ns;
-//     float lon;
-//     char ew;
-//     float alt; 
-//     int sat;
-//     int16_t temp;
-//     int16_t hum;
-//     int16_t press;
-//     int16_t gas;
-//     double x_accel; 
-//     double y_accel;
-//     double z_accel;
-// };
-
 extern uint8_t get_ble_tick(void);
 
 extern void set_ble_tick(uint8_t value);

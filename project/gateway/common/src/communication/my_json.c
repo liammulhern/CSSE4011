@@ -1,15 +1,13 @@
+#include <zephyr/logging/log.h>
+#include <zephyr/logging/log_ctrl.h>
+#include <zephyr/sys/timeutil.h>
+#include <zephyr/sys/uuid.h> 
+
 #include <my_json.h>
 #include <string.h>  // required for memcpy
 #include <stdio.h>   // for snprintf
 #include <ctype.h>
-
-// #include <zephyr/data/json.h>
-
-#include <zephyr/logging/log.h>
-#include <zephyr/logging/log_ctrl.h>
-#include <zephyr/sys/timeutil.h>
 #include <time.h>
-#include <zephyr/sys/uuid.h> 
 
 LOG_MODULE_REGISTER(json_module);
 
@@ -182,5 +180,7 @@ extern void encode_and_print_json(const struct json_full_packet *packet) {
     } else {
         printk("JSON encoding failed or buffer too small.\n");
     }
+    // fflush(stdout);
     log_flush();  //flush each JSON to uart
+    // k_msleep(20);
 }
