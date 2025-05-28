@@ -8,10 +8,10 @@
 #include <parser.h>
 #include <gui.h>
 
-#define REQUEST_SIZE 2048
-#define BODY_BUF_SIZE 2048
+#define REQUEST_SIZE 1024
+#define BODY_BUF_SIZE 1024
 
-static uint8_t recv_buf[1024];
+static uint8_t recv_buf[512];
 
 LOG_MODULE_REGISTER(http_module, LOG_LEVEL_DBG);
 

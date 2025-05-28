@@ -15,7 +15,7 @@ from serial_client import SerialClient
 from message_parser import parse_buffer
 from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
-from azure_iothub import send_json_to_azure_iot_hub, send_test_message_to_azure_iot_hub
+from azure_iothub import AzureIoTHubMqttClient, send_test_message_to_azure_iot_hub, send_iot_hub_test_message
 from http_client import send_test_message_to_local_server
 
 # Configure root logger
@@ -54,6 +54,11 @@ def main():
         help="Run a test to send a message to Azure IoT Hub"
     )
     parser.add_argument(
+        "--az-mqtt",
+        action="store_true",
+        help="Run a test to send a message to Azure IoT Hub"
+    )
+    parser.add_argument(
         "--local-test",
         action="store_true",
         help="Run a test to send a message to the local HTTP server"
@@ -68,12 +73,18 @@ def main():
         send_test_message_to_azure_iot_hub()
         return
 
+    if args.az_mqtt:
+        send_iot_hub_test_message()
+        return
+
     if args.local_test:
         send_test_message_to_local_server()
         return
  
-    client = SerialClient(args.port, args.baud, parser_callback=parse_buffer, received_callback=send_json_to_azure_iot_hub)
-    client.start()
+    azure_client = AzureIoTHubMqttClient(message_callback=print)
+
+    serial_client = SerialClient(args.port, args.baud, parser_callback=parse_buffer, received_callback=azure_client.send_telemetry)
+    serial_client.start()
 
     print(f"Connected to {args.port} @ {args.baud}. Type 'exit' to quit.")
 
@@ -87,11 +98,12 @@ def main():
                 line = session.prompt()
                 if line.strip().lower() == "exit":
                     break
-                client.write(line)
+                serial_client.write(line)
         except (KeyboardInterrupt, EOFError):
             print("\nExiting…")
         finally:
-            client.stop()
+            serial_client.stop()
+            azure_client.shutdown()
 
 if __name__ == "__main__":
     main()

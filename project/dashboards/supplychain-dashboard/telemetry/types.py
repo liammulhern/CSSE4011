@@ -4,7 +4,6 @@ from typing_extensions import TypedDict as TypedDictClass
 class Header(TypedDict):
     messageId: str
     gatewayId: str
-    timestamp: str  # ISO 8601
     schemaVersion: str
     messageType: str
 
@@ -36,14 +35,12 @@ class AccelerationPayload(TypedDict):
 #########
 
 class TelemetryPayload(TypedDict):
-    messageId: str
     deviceId: str
     timestamp: str
     uptime: str
     location: LocationPayload
     environment: EnvironmentPayload
     acceleration: AccelerationPayload
-    hash: str
 
 class GatewayPayloadTelemetry(TypedDict):
     header: Header

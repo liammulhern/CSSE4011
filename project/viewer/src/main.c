@@ -22,5 +22,5 @@ int main(void)
 }
 
 K_THREAD_DEFINE(gui_tid, GUI_THREAD_STACK_SIZE, gui_thread, NULL, NULL, NULL, GUI_THREAD_PRIORITY, 0, 0);
-K_THREAD_DEFINE(wifi_tid, 10000, wifi_thread, NULL, NULL, NULL, GUI_THREAD_PRIORITY, 0, 0);
-K_THREAD_DEFINE(haptics_tid, 512, haptics_thread, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(wifi_tid, 12000, wifi_thread, NULL, NULL, NULL, GUI_THREAD_PRIORITY, 0, 0);
+K_THREAD_DEFINE(haptics_tid, 256, haptics_thread, NULL, NULL, NULL, 7, 0, 0);

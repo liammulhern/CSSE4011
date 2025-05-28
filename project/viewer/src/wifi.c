@@ -5,16 +5,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <zephyr/net/dns_resolve.h>
+#include <zephyr/settings/settings.h>
 #include <zephyr/kernel.h>
 #include <zephyr/net/net_if.h>
 #include <zephyr/net/wifi_mgmt.h>
 #include <zephyr/net/net_event.h>
 #include <zephyr/logging/log.h>
-#include <errno.h>
 #include <wifi.h>
 #include <http_get.h>
 #include <env.h>
 #include <gui.h>
+#include <stdatomic.h>
+
+//#include <zephyr/settings/settings.h>
+
+char wifi_ssid[MAX_SSID_LEN] = CONFIG_WIFI_DEFAULT_SSID;
+char wifi_psk [MAX_PSK_LEN] = CONFIG_WIFI_DEFAULT_PSK;
+
+K_MUTEX_DEFINE(wifi_retry_mutex);
 
 static uint8_t wifi_connection_retry_count = 0;
 static char wifi_rety_dots[WIFI_RETRY_COUNT + 1] = {0};
@@ -31,6 +40,78 @@ static struct net_mgmt_event_callback l4_cb;
 LOG_MODULE_REGISTER(wifi_module, LOG_LEVEL_INF);
 
 void wifi_connect_status(void);
+//
+// static int wifi_settings_set(const char *key, size_t len, settings_read_cb read_cb, void *cb_arg)
+// {
+//     size_t rd;
+//
+//     if (strcmp(key, "ssid") == 0) {
+//         rd = read_cb(cb_arg, wifi_ssid, MIN(len, MAX_SSID_LEN - 1));
+//         wifi_ssid[rd] = '\0';
+//         return 0;
+//     }
+//     if (strcmp(key, "psk") == 0) {
+//         rd = read_cb(cb_arg, wifi_psk, MIN(len, MAX_PSK_LEN - 1));
+//         wifi_psk[rd] = '\0';
+//         return 0;
+//     }
+//
+//     return -ENOENT;
+// }
+//
+// static struct settings_handler wifi_conf = {
+//     .name = "wifi",
+//     .h_set = wifi_settings_set,
+// };
+//
+// static int wifi_settings_init(void)
+// {
+//     settings_subsys_init();
+//
+//     int ret = settings_subsys_init();
+//     if (ret) {
+//             LOG_ERR("settings subsys initialization: fail (err %d)\n", ret);
+//             return -1;
+//     }
+//
+//     ret = settings_register(&wifi_conf);
+//
+//     if (ret) {
+//         LOG_ERR("subtree <%s> handler registered: fail (err %d)\n", wifi_conf.name, ret);
+//         return -1;
+//     }
+//
+//     ret = settings_load_subtree("wifi");
+//
+//     if (ret) {
+//         LOG_ERR("subtree failed to load registered: fail (err %d)\n", ret);
+//         return -1;
+//     }
+//
+//     return 0;
+// }
+
+void wifi_connection_retry_reset(void) {
+
+    /* Delete old callbacks before reinit */
+    net_mgmt_del_event_callback(&ipv4_cb);
+    net_mgmt_del_event_callback(&wifi_cb);
+    net_mgmt_del_event_callback(&l4_cb);
+
+    wifi_callbacks_init();
+
+    /* Block indefinitely until we can take the mutex */
+    k_mutex_lock(&wifi_retry_mutex, K_FOREVER);
+
+    /* reset the retry counter */
+    wifi_connection_retry_count = 0;
+
+    /* clear the dots string in one go */
+    memset(wifi_rety_dots, 0, sizeof(wifi_rety_dots));
+
+    /* release the mutex so others can use it */
+    k_mutex_unlock(&wifi_retry_mutex);
+}
 
 static void handle_wifi_connect_result(struct net_mgmt_event_callback *cb)
 {
@@ -43,7 +124,7 @@ static void handle_wifi_connect_result(struct net_mgmt_event_callback *cb)
     else
     {
         LOG_INF("Connected\n");
-        gui_notify_wifi_status(LV_SYMBOL_WIFI, SSID, "");
+        gui_notify_wifi_status(LV_SYMBOL_WIFI, wifi_ssid, "");
         k_sem_give(&wifi_connected);
     }
 }
@@ -56,12 +137,12 @@ static void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb)
     {
         LOG_ERR("Disconnection request (%d)\n", status->status);
 
-        wifi_rety_dots[wifi_connection_retry_count] = '.';
-        wifi_connection_retry_count++;
+        k_mutex_lock(&wifi_retry_mutex, K_FOREVER);
+        wifi_rety_dots[wifi_connection_retry_count++] = '.';
 
         if (wifi_connection_retry_count < WIFI_RETRY_COUNT)
         {
-            gui_notify_wifi_status(LV_SYMBOL_WARNING, SSID, wifi_rety_dots);
+            gui_notify_wifi_status(LV_SYMBOL_WARNING, wifi_ssid, wifi_rety_dots);
 
             k_msleep(1000 * wifi_connection_retry_count); // Exponential backoff
 
@@ -69,6 +150,9 @@ static void handle_wifi_disconnect_result(struct net_mgmt_event_callback *cb)
 
             wifi_connect();
         }
+
+        k_mutex_unlock(&wifi_retry_mutex);
+
     }
     else
     {
@@ -83,6 +167,8 @@ static void handle_ipv4_result(struct net_if *iface)
     if (got_ipv4) {
         return;
     }
+
+    LOG_INF("Aquiring IP");
 
     struct net_if_config *cfg = net_if_get_config(iface);
     struct net_if_ipv4  *ipv4 = cfg->ip.ipv4;
@@ -102,15 +188,21 @@ static void handle_ipv4_result(struct net_if *iface)
                       &u->ipv4.address.in_addr,
                       buf, sizeof(buf));
 
+        LOG_INF("IP: %s", buf);
+
         /* print the subnet mask (now per‐entry) */
         net_addr_ntop(AF_INET,
                       &u->netmask,
                       buf, sizeof(buf));
 
+        LOG_INF("SUBNET: %s", buf);
+
         /* print the router/gateway */
         net_addr_ntop(AF_INET,
                       &ipv4->gw,
                       buf, sizeof(buf));
+
+        LOG_INF("ROUTER: %s", buf);
 
         k_sem_give(&ipv4_address_obtained);
         got_ipv4 = true;
@@ -150,10 +242,10 @@ void wifi_connect(void)
 
     struct wifi_connect_req_params wifi_params = {0};
 
-    wifi_params.ssid = SSID;
-    wifi_params.psk = PSK;
-    wifi_params.ssid_length = strlen(SSID);
-    wifi_params.psk_length = strlen(PSK);
+    wifi_params.ssid          = wifi_ssid;
+    wifi_params.ssid_length   = strlen(wifi_ssid);
+    wifi_params.psk           = wifi_psk;
+    wifi_params.psk_length    = strlen(wifi_psk);
     wifi_params.channel = WIFI_CHANNEL_ANY;
     wifi_params.security = WIFI_SECURITY_TYPE_PSK;
     wifi_params.band = WIFI_FREQ_BAND_2_4_GHZ; 
@@ -197,7 +289,9 @@ void wifi_disconnect(void)
     }
 }
 
-void wifi_init(void) {
+void wifi_callbacks_init(void) {
+    got_ipv4 = false;
+
     /* Layer-2 Wi-Fi events */
     net_mgmt_init_event_callback(&wifi_cb,
         wifi_mgmt_event_handler,
@@ -227,26 +321,28 @@ void wifi_thread(void)
 {
     LOG_INF("WiFi Thread started");
 
-    /* Initialize the Wi-Fi interface */
-    wifi_init();
+    //wifi_settings_init();
+    wifi_callbacks_init();
 
     wifi_connect();
     k_sem_take(&wifi_connected, K_FOREVER);
     wifi_status();
     k_sem_take(&ipv4_address_obtained, K_FOREVER);
 
+    LOG_INF("WiFi IP obtained");
+
     while (1) {
-        gui_notify_wifi_status(LV_SYMBOL_WIFI, SSID, LV_SYMBOL_LOOP);
+        gui_notify_wifi_status(LV_SYMBOL_WIFI, wifi_ssid, LV_SYMBOL_LOOP);
 
         /* Perform an HTTP query to fetch notifications */
         int ret = http_query(API_HOST, "/api");
 
         if (ret < 0) {
             LOG_ERR("HTTP Query failed: %d", ret);
-            gui_notify_wifi_status(LV_SYMBOL_WIFI, SSID, LV_SYMBOL_WARNING);
+            gui_notify_wifi_status(LV_SYMBOL_WIFI, wifi_ssid, LV_SYMBOL_WARNING);
         } else {
             LOG_INF("HTTP Query successful");
-            gui_notify_wifi_status(LV_SYMBOL_WIFI, SSID, "");
+            gui_notify_wifi_status(LV_SYMBOL_WIFI, wifi_ssid, "");
         }
 
         /* Optionally, you can add a delay or other operations here */

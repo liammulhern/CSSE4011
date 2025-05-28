@@ -1,9 +1,11 @@
 import os
 import json
 import logging
+import threading
 
+from azure.iot.hub import IoTHubRegistryManager
 from azure.iot.device import IoTHubDeviceClient, Message
-from typing import Dict, Any
+from typing import Callable, Dict, Any, Optional
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -18,7 +20,7 @@ class AzureIoTHubMqttClient:
     to send JSON-encoded telemetry.
     """
 
-    def __init__(self, connection_string: str = None) -> None:
+    def __init__(self, message_callback: Optional[Callable] = None, connection_string: Optional[str] = None) -> None:
         """
         If connection_string is None, reads from environment variable
         IOTHUB_DEVICE_CONNECTION_STRING.
@@ -30,13 +32,18 @@ class AzureIoTHubMqttClient:
                 "via constructor or IOTHUB_DEVICE_CONNECTION_STRING env var"
             )
 
+        if message_callback:
+            self.message_callback = message_callback
+
         # create client (under the hood, connects via MQTT on port 8883)
         self.client = IoTHubDeviceClient.create_from_connection_string(conn_str)
+        self.client.on_message_received = self.receive_telemetry
+
         logger.info("Azure IoT Hub client initialized.")
 
     def send_telemetry(self, data: Dict[str, Any]) -> None:
         """
-        Send a single telemetry message (dict→JSON) to the IoT Hub.
+            Send a single telemetry message (dict→JSON) to the IoT Hub.
         """
         # Serialize dictionary to JSON string
         payload = json.dumps(data)
@@ -49,14 +56,22 @@ class AzureIoTHubMqttClient:
         self.client.send_message(msg)
         logger.info("Telemetry successfully sent.")
 
+    def receive_telemetry(self, message) -> None:
+        """
+            Receive data from Azure MQTT notifications
+        """
+
+        logger.info(f"IoT received: {message}")
+
+        for property in vars(message).items():
+            self.message_callback(property)
 
     def shutdown(self) -> None:
         """
-        Gracefully tear down the MQTT connection.
+            Gracefully tear down the MQTT connection.
         """
         self.client.shutdown()
         logger.info("IoT Hub client shut down.")
-
 
 def send_json_to_azure_iot_hub(data: Dict[str, Any]) -> None:
     """
@@ -116,3 +131,32 @@ def send_test_message_to_azure_iot_hub() -> None:
 
     send_json_to_azure_iot_hub(payload)
     logger.info("Test message sent to Azure IoT Hub.")
+
+def send_iot_hub_test_message(connection_string: Optional[str] = None) -> None:
+    """
+        Send MQTT message to iothub
+    """
+    conn_str = connection_string or os.getenv("IOTHUB_CONNECTION_STRING")
+
+    registry_manager = IoTHubRegistryManager.from_connection_string(conn_str)
+
+    # define the device ID
+    deviceID = "pathledger-gateway-uart-0"
+
+    message = {
+        ""
+    }
+
+    # define the message
+    message = "{\"c2d test message\"}"
+
+    # include optional properties
+    props={}
+    props.update(messageId = "message1")
+    props.update(prop1 = "test property-1")
+    props.update(prop1 = "test property-2")
+    prop_text = "Test message"
+    props.update(testProperty = prop_text)
+
+    # send the message through the cloud (IoT Hub) to the device
+    registry_manager.send_c2d_message(deviceID, message, properties=props)
