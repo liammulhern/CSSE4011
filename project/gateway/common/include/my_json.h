@@ -158,7 +158,7 @@ static const char JSON_FORMAT[] =
     "},"
     "\"payload\":{"
         "\"deviceId\":\"%s\","
-        "\"time\":\"%s\","
+        "\"timestamp\":\"%s\","
         "\"uptime\":\"%d\","
         "\"location\":{"
             "\"latitude\":\"%s\","
