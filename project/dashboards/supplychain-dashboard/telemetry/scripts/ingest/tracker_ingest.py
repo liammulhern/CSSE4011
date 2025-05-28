@@ -82,7 +82,7 @@ def tracker_raw_data_ingest(gateway: Gateway, payload: TelemetryPayload) -> Trac
 
     # 5. Create TrackerEvent instance
     tracker_event = TrackerEvent.objects.create(
-        message_id=payload['messageId'],
+        message_id=gateway.,
         tracker=tracker,
         gateway=gateway,
         event_type=TrackerEvent.EVENT_TYPE_TELEMETRY,

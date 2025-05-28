@@ -17,6 +17,9 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
 from azure_iothub import AzureIoTHubMqttClient, send_test_message_to_azure_iot_hub, send_iot_hub_test_message
 from http_client import send_test_message_to_local_server
+from gateway_cli import set_device
+
+serial_client_global = None
 
 # Configure root logger
 logging.basicConfig(
@@ -81,15 +84,16 @@ def main():
         send_test_message_to_local_server()
         return
  
-    azure_client = AzureIoTHubMqttClient(message_callback=print)
+    azure_client = AzureIoTHubMqttClient(message_callback=process_messages)
 
     serial_client = SerialClient(args.port, args.baud, parser_callback=parse_buffer, received_callback=azure_client.send_telemetry)
     serial_client.start()
 
+    serial_client_global = serial_client
+
     print(f"Connected to {args.port} @ {args.baud}. Type 'exit' to quit.")
 
     session = PromptSession("> ")
-    print(f"Connected to {args.port} @ {args.baud}. Type 'exit' to quit.")
 
     # patch_stdout lets us safely print() from other threads without breaking the prompt.
     with patch_stdout():
@@ -104,6 +108,22 @@ def main():
         finally:
             serial_client.stop()
             azure_client.shutdown()
+
+def process_messages(message: dict):
+    """
+        Check messages for 'deviceIDupdate' and call set_device() if found.
+    """
+    if message["messageType"] == "deviceIDUpdate":
+        global serial_client_global
+
+        if not serial_client_global:
+            return
+
+        value = message["message"]
+
+        print(f"deviceIDupdate message received with value: {value}")
+
+        set_device(serial_client_global, value)
 
 if __name__ == "__main__":
     main()

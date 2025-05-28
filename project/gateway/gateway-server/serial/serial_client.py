@@ -68,16 +68,6 @@ class SerialClient:
         line = data + "\n"
         self.ser.write(line.encode("utf-8"))
         logger.debug("Sent: %s", line.strip())
-        
-    def set_device(self, value: int):
-        """
-        Wrapper to send the 'set_device' CLI command over serial.
-
-        Args:
-            value (int): Device ID value (must be 0–255)
-        """
-        cmd = f"set_device {value}"
-        self.write(cmd)
 
     def _read_loop(self):
         """
@@ -90,14 +80,3 @@ class SerialClient:
             if chunk:
                 buffer.extend(chunk)
                 buffer = self.parser_callback(buffer, self.received_callback)
-
-def process_messages(interface, messages):
-    """
-    Check messages for 'deviceIDupdate' and call set_device() if found.
-    """
-    if "deviceIDupdate" in messages:
-        value = messages["deviceIDupdate"]
-        print(f"deviceIDupdate message received with value: {value}")
-        interface.set_device(value)
-        # Optionally, clear it after processing:
-        del messages["deviceIDupdate"]

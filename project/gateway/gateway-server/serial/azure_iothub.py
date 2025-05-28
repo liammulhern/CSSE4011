@@ -56,15 +56,43 @@ class AzureIoTHubMqttClient:
         self.client.send_message(msg)
         logger.info("Telemetry successfully sent.")
 
-    def receive_telemetry(self, message) -> None:
+    def receive_telemetry(self, message: bytes) -> None:
         """
             Receive data from Azure MQTT notifications
         """
 
-        logger.info(f"IoT received: {message}")
+        # Log the SDK Message object itself
+        logger.info("IoT received: %r", message)
 
-        for property in vars(message).items():
-            self.message_callback(property)
+        # Step 1: pull the payload bytes out
+        try:
+            # `message.data` is usually bytes or bytearray
+            raw_bytes = message.data if hasattr(message, "data") else message
+            if isinstance(raw_bytes, (bytes, bytearray)):
+                raw_str = raw_bytes.decode("utf-8")
+            else:
+                raw_str = str(raw_bytes)
+        except Exception as e:
+            logger.error("Failed to extract payload from Message: %s", e, exc_info=True)
+            return
+
+        # Step 2: JSON-decode
+        try:
+            message_parsed = json.loads(raw_str)
+            logger.info("Parsed JSON: %s", message_parsed)
+        except json.JSONDecodeError as e:
+            logger.error("JSON decode error: %s -- payload was: %s", e, raw_str)
+            return
+        except Exception as e:
+            logger.error("Unexpected error during JSON parsing: %s", e, exc_info=True)
+            return
+
+        # Step 3: hand off to your callback, catching _its_ errors too
+        try:
+            self.message_callback(message_parsed)
+        except Exception as e:
+            logger.error("message_callback raised an exception: %s", e, exc_info=True)
+            # swallow it so the SDK handler doesn’t wrap it again
 
     def shutdown(self) -> None:
         """
@@ -144,19 +172,11 @@ def send_iot_hub_test_message(connection_string: Optional[str] = None) -> None:
     deviceID = "pathledger-gateway-uart-0"
 
     message = {
-        ""
+        "messageType": "deviceIDUpdate",
+        "message": 10
     }
 
-    # define the message
-    message = "{\"c2d test message\"}"
-
-    # include optional properties
-    props={}
-    props.update(messageId = "message1")
-    props.update(prop1 = "test property-1")
-    props.update(prop1 = "test property-2")
-    prop_text = "Test message"
-    props.update(testProperty = prop_text)
+    message_json = json.dumps(message)
 
     # send the message through the cloud (IoT Hub) to the device
-    registry_manager.send_c2d_message(deviceID, message, properties=props)
+    registry_manager.send_c2d_message(deviceID, message_json)
