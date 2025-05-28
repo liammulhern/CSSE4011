@@ -16,45 +16,12 @@
 #include <tinycrypt/constants.h>
 #include <string.h>
 
+#include <sensors.h>
+
+
 #define TRACKER_CONTROL_STACK_SIZE 2048
 #define TRACKER_CONTROL_PRIORITY 5
 
-struct sensor_blk {
-    uint32_t time;
-    int32_t uptime;
-    float lat; //
-    float lon; //
-    float alt; //
-    int16_t temp; //
-    int16_t hum; //
-    int16_t press; //
-    int16_t gas; //
-    int16_t x_accel; // 
-    int16_t y_accel; //
-    int16_t z_accel; //
-    char ns; //
-    char ew; //
-    char padding[28];
-};
-
-// // THIS WILL BE REMOVED AND INCLUDED IN ACTUAL FILE SET UP
-// // -----------------------------------------------------------------
-// struct sensor_blk {
-//     uint32_t timestamp;
-//     float lat;
-//     char ns;
-//     float lon;
-//     char ew;
-//     float alt; 
-//     int sat;
-//     int16_t temp;
-//     int16_t hum;
-//     int16_t press;
-//     int16_t gas;
-//     double x_accel; 
-//     double y_accel;
-//     double z_accel;
-// };
 
 extern uint8_t get_ble_tick(void);
 
