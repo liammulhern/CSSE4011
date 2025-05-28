@@ -89,6 +89,7 @@ def main():
     serial_client = SerialClient(args.port, args.baud, parser_callback=parse_buffer, received_callback=azure_client.send_telemetry)
     serial_client.start()
 
+    global serial_client_global
     serial_client_global = serial_client
 
     print(f"Connected to {args.port} @ {args.baud}. Type 'exit' to quit.")

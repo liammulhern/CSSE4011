@@ -64,7 +64,6 @@ class AzureIoTHubMqttClient:
         # Log the SDK Message object itself
         logger.info("IoT received: %r", message)
 
-        # Step 1: pull the payload bytes out
         try:
             # `message.data` is usually bytes or bytearray
             raw_bytes = message.data if hasattr(message, "data") else message
@@ -76,7 +75,6 @@ class AzureIoTHubMqttClient:
             logger.error("Failed to extract payload from Message: %s", e, exc_info=True)
             return
 
-        # Step 2: JSON-decode
         try:
             message_parsed = json.loads(raw_str)
             logger.info("Parsed JSON: %s", message_parsed)
@@ -87,7 +85,6 @@ class AzureIoTHubMqttClient:
             logger.error("Unexpected error during JSON parsing: %s", e, exc_info=True)
             return
 
-        # Step 3: hand off to your callback, catching _its_ errors too
         try:
             self.message_callback(message_parsed)
         except Exception as e:
