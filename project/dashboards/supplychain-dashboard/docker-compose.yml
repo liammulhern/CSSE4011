@@ -14,7 +14,6 @@ services:
       dockerfile: Dockerfile.django
     ports:
       - "8000:8000"
-      - "5678:5678"
     volumes:
       - .:/home/appuser/pathledger-backend
     env_file:

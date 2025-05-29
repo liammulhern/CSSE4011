@@ -1,0 +1,9 @@
+# Ignore deps & build artifacts
+node_modules
+vue/node_modules
+__pycache__
+*.pyc
+*.log
+.env
+.git
+
