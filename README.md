@@ -26,12 +26,13 @@ An end-to-end IoT and blockchain solution that creates a tamper-proof “Digital
 
 | Deliverable                                                                            | KPI / Success Metric                                                  |
 | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **1. IoT Sensor Prototype**<br>MCU firmware for environmental sensing and tagging.     | ≥ 99 % packet delivery rate over bluetooth in tests.                  |
+| **1. IoT Sensor Prototype**<br>MCU firmware for environmental sensing and tagging.     | 100% packet delivery rate over bluetooth in tests.*                   |
 | **2. Blockchain Smart Contract**<br>Permissioned chain contract to store event hashes. | Record all on-chain events without error.                             |
 | **3. Off-chain Data Store Integration**<br>Raw sensor logs in Azure Postgres SQL DB    | Average write latency < 200 ms; ≥ 99.9 % data durability.             |
 | **4. Web/Mobile Dashboard**<br>DPP lookup, analytics, alerting UI.                     | Displays relevant data for users based on relevant permission         |
-| **5. ABAC Permission Engine**<br>Attribute-based access control for all stakeholders.  | 100 % enforcement of role policies in penetration tests.              |
+| **5. Sensor Readings**<brGather all sensors, on interrupts and rtc                     | 100% success rate at collecting sensors and triggers on all motion.   |
 | **6. End-to-End Traceability Demo**<br>Consumers can view a package's full history.    | Time to display full provenance ≤ 5 s; zero incorrect records.        |
+| **7. Cloud-to-device two-way communication**<br>Communication between cloud and device | Full transmission of all messages between cloud and device.           |
 
 ---
 
@@ -221,4 +222,15 @@ gantt
     Tracker BLE                    :T21, after T3, 6d
 ```
 
+---
 
+## Member Contributions
+
+### Alexander Strang - 47423510 (Member 1)
+Set up the tracker node's functionality. Connected all sensors, adapted drivers, set sensor triggers, set up thingy52's flash. Adapted gnss driver for thingy52. Set up the thingy52's flash storage_partition as a 20kB ring buffer, implementing rudementary garbage collection. Set up the drivers and a trigger for the lis2dh12, functionality for the lps22hb, hts221 and ccs811 sensors. Set up and developed a driver for the 2nd counter/timer and led on the thingy52. Adapated power management of thingy52. Established onboard led to act as actuator. 
+
+### Liam Mulhern - 474428748 (Member 2)
+Set up the neonm9n gnss driver for the nucleo board. Set up the M5 Core as a notification dashboard, capable of displaying the alerts and data passed from the server via WiFi over HTTP. Designed all aspects of the server, including the website, MQTT hosts and UART gateway (server side). Integrated a block chain into the gateway - server connection, to ensure security. Developed hash encoding and decoding on the server and tracker side, so the data could not be tampered with. Setup the display dashboards, and website, such that packages can be tracked and all data is readily avaliable to the users. 
+
+### Ryan Smith - 47444131 (Member 3)
+Developed the bluetooth libraries for both the tracker and gateway nodes. Implementing package concatination, automatic connections and disconnections, cryptographically secure packages, many-to-many subscriber-publisher connections. Implemented JSON parsing of the package. Adapted thingy52 bluetooth DID advertising such that it allows the thingy52 to enter low power mode if a connection is not made. 
