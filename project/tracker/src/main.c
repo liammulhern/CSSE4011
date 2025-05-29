@@ -50,7 +50,8 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
         flash_read(flash_dev, offset, &sensors, sizeof(sensors));
         offset += sizeof(sensors);
         flash_vars.read_size++;
-        LOG_INF("%u %u %u %u %d %d %d", sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
+        LOG_INF("Temp: %u, Hum: %u, Press: %u, Gas: %u, x: %d, y: %d, z %d", sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
+        LOG_INF("Read: time: %u   uptime: %d   lat: %f   lon: %f   alt: %f", sensors.time, sensors.uptime, (double)sensors.lat, (double)sensors.lon, (double)sensors.alt);
         pack_sensor_data(&sensors);
     }
     write_consts(flash_dev, write_block_size, flash_vars.size, flash_vars.read_size, flash_vars.head, flash_vars.tail, flash_vars.wrap_around);
@@ -66,7 +67,8 @@ void write_loop(const struct device *flash_dev, uint8_t write_block_size) {
     uint8_t gnss_retry = 0;
     uint8_t sensor_retry = 0;
 
-read_sensors:
+sensor_goto:
+    k_msleep(200);
     err = read_sensors(&(sensors.temp), &(sensors.hum), &(sensors.press), &(sensors.gas), &(sensors.x_accel), &(sensors.y_accel), &(sensors.z_accel));
     if (err) {
         sensor_retry++;
@@ -81,10 +83,12 @@ read_sensors:
             sensors.y_accel = 0;
             sensors.z_accel = 0;
         } else {
-            goto read_sensors;
+            goto sensor_goto;
         }
     }
-read_gnss:
+    err = init_gnss();
+gnss_goto:
+    k_msleep(1500);
     err |= read_gnss(&(sensors.time), &(sensors.lat), &(sensors.ns), &(sensors.lon), &(sensors.ew), &(sensors.alt), &sat);
     if (err) {
         gnss_retry++;
@@ -96,13 +100,13 @@ read_gnss:
             sensors.alt = 0;
             sensors.time = 0;
         } else {
-            goto read_gnss;
+            goto gnss_goto;
         }
     }
-    LOG_INF("%u %u %u %u %d %d %d", sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
+    
     flash_write_sensor(flash_dev, write_block_size, sensors);
+    LOG_INF("Write: time: %u   lat: %f   lon: %f   alt: %f", sensors.time, (double)sensors.lat, (double)sensors.lon, (double)sensors.alt);
 }
-
 
 int init_all() {
     int err = 0;
@@ -117,16 +121,11 @@ int init_all() {
     }
     /*--------------------*/
 
-	// if (!device_is_ready(cons)) {
-	// 	printf("%s: device not ready.\n", cons->name);
-	// 	return EINVAL;
-	// }
-
     init_rtc();
     init_led();
     bind_sensors();
     err = init_sensors();
-    err |= init_gnss();
+    //err |= init_gnss();
     if (err) {
         LOG_WRN("error setting up devices. Shutting down.\n");
         return err;
@@ -144,19 +143,26 @@ int init_all() {
 
 int main(void) {
 
+    const struct device *const cons = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
     const struct device *flash_dev = TEST_PARTITION_DEVICE;
     struct flash_parameters flash_params;
     memcpy(&flash_params, flash_get_parameters(flash_dev), sizeof(flash_params));
     uint8_t write_block_size = flash_params.write_block_size;
      if (!device_is_ready(flash_dev)) {
-		printf("Internal storage device not ready\n");
+		LOG_WRN("Internal storage device not ready\n");
         return EINVAL;
 	}
+    if (!device_is_ready(cons)) {
+		LOG_WRN("%s: device not ready.\n", cons->name);
+		return EINVAL;
+	}
+    k_msleep(2000);
     int err = init_all();
     if (err) {
         LOG_WRN("Error in init, shutting down");
     }
     write_init_consts(flash_dev, write_block_size);
+    k_msleep(2000);
     while(1) {  
         // Loop occurs on every wakeup from idle or after every occurance
         if (get_rtc_tick()) {
@@ -180,7 +186,7 @@ int main(void) {
                 stop_advertising();
             }
             /*--------------------*/
-            read_loop(flash_dev, write_block_size);
+            //read_loop(flash_dev, write_block_size);
             
 
         } else if (get_accel_tick()) {

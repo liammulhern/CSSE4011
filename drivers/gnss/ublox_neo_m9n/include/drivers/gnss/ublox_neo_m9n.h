@@ -15,6 +15,7 @@
 
 #include <drivers/gnss/ublox_neo_m9n_defines.h>
 
+extern int fix_uptime;
 enum gnss_mode {
     Portable = 0,
     Stationary = 2,

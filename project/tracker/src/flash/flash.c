@@ -69,6 +69,7 @@ void flash_write_sensor(const struct device *flash_dev, uint8_t write_block_size
     }
 
     sensors.uptime = k_uptime_seconds();
+    //sensors.time += sensors.uptime;
     memcpy(&byte_array, &(sensors), sizeof(sensors));
     for (int j = 0; j < write_cycles; j++) {
         offset = FLASH_PAGE_SIZE + TEST_PARTITION_OFFSET + ((flash_vars.size) * (sizeof(sensors))) + j * write_block_size;

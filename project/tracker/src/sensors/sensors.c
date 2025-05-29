@@ -1,13 +1,13 @@
 #include <sensors.h>
 
 
-static struct neom9n_api *neo_api;
-
 const struct device *neo_dev;
+static struct neom9n_api *neo_api;
 const struct device *pressure;
 const struct device *humidity;
 const struct device *evoc;
 const struct device *accel;
+
 uint8_t accel_tick = 0;
 
 uint8_t get_accel_tick(void) {
@@ -31,6 +31,7 @@ static void accel_handler(const struct device *dev, const struct sensor_trigger 
         accel_tick = 1;
     }
 }
+
 void bind_sensors(void) {
     neo_dev = DEVICE_DT_GET(NEO_SERIAL);
     pressure = DEVICE_DT_GET_ONE(st_lps22hb_press);
@@ -57,7 +58,10 @@ int init_anymotion(void) {
                             &odr);
     err = sensor_trigger_set(accel, &trig, accel_handler);
     return err;
+    
 }
+
+
 int init_gnss(void) { 
 
     if (!device_is_ready(neo_dev)) {
@@ -65,8 +69,8 @@ int init_gnss(void) {
     }
     neo_api = (struct neom9n_api *) neo_dev->api;
 
-    neo_api->cfg_nav5(neo_dev, Stationary, P_2D, 0, 1, 5, 100, 100, 100, 350, 0, 60, 0, 0, 0,
-              AutoUTC);
+    neo_api->cfg_nav5(neo_dev, Portable, P_3D, 0, 1, 5, 100, 100, 100, 350, 0, 60, 0, 0, 0,
+              AutoUTC); // Portable changed from Stationary UNSURE :TODO:
     neo_api->cfg_gnss(neo_dev, 0, 32, 5, 0, 8, 16, 0, 0x01010001, 1, 1, 3, 0, 0x01010001, 3, 8,
               16, 0, 0x01010000, 5, 0, 3, 0, 0x01010001, 6, 8, 14, 0, 0x01010001);
     neo_api->cfg_msg(neo_dev, NMEA_DTM, 0);
@@ -86,7 +90,7 @@ int init_gnss(void) {
     neo_api->cfg_msg(neo_dev, NMEA_TXT, 0);
     neo_api->cfg_msg(neo_dev, NMEA_VLW, 0);
     neo_api->cfg_msg(neo_dev, NMEA_VTG, 0);
-    neo_api->cfg_msg(neo_dev, NMEA_ZDA, 0);
+    neo_api->cfg_msg(neo_dev, NMEA_ZDA, 1);
     return 0;
 }
 
@@ -109,6 +113,7 @@ int read_gnss(uint32_t *time,
     }
     return 0;
 }
+
 
 int init_sensors(void) {
 

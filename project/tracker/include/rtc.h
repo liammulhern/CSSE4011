@@ -10,7 +10,7 @@
 
 
 #define ALARM_CHANNEL_ID 0
-#define UPDATE 60
+#define UPDATE 20
 
 uint8_t get_rtc_tick(void);
 

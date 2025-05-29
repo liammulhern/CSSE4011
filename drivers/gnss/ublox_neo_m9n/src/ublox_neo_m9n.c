@@ -102,7 +102,6 @@ static int read_register(const struct device *dev, uint8_t addr, char *buffer)
     const struct neom9n_config *cfg = dev->config;
 
     int rc = i2c_write_read(cfg->i2c_dev, cfg->i2c_addr, &addr, sizeof(addr), buffer, 1);
-
     return rc;
 }
 

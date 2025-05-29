@@ -4,10 +4,15 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/sensor.h>
+#include <stdio.h>
 
+#include <zephyr/sys/util.h>
+#include <stdlib.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/gpio/gpio_sx1509b.h>
 #include <drivers/gnss/ublox_neo_m9n.h>
 #include <zephyr/drivers/hwinfo.h>
+#include <inttypes.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/comparator.h>
 #include <zephyr/drivers/timer/nrf_grtc_timer.h>
