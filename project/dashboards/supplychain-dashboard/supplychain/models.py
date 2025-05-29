@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts.models import Company
 
-from supplychain.scripts import iota_client
+from supplychain.scripts import iota_client, compute_event_hash
 
 import json
 import uuid
@@ -296,15 +296,7 @@ class TrackerEvent(models.Model):
 
                 e.g. "0x12398a12bc14e09"
         """
-        serialized_key: str = json.dumps(
-            {
-                "message_id": self.message_id, 
-                "payload": self.payload
-            },
-            sort_keys=True
-        )
-
-        serialized_key_enc = hashlib.sha256(serialized_key.encode("utf-8")).hexdigest()
+        serialized_key_enc = compute_event_hash.compute_tracker_hash(self.payload)
 
         return HexStr(serialized_key_enc)
 

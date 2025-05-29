@@ -1,7 +1,7 @@
 #ifndef JSON_H_
 #define JSON_H_
 
-#define JSON_BUFFER_SIZE 1024
+#define JSON_BUFFER_SIZE 352
 
 static const char JSON_FORMAT[] =
 "\"payload\":{"

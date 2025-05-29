@@ -161,11 +161,12 @@ void hash_sensor_blk(const struct sensor_blk *data, uint8_t *hash_buffer) {
         return;
     }
 
-    char json_output[JSON_BUFFER_SIZE] = {0};
+    char json_output[JSON_BUFFER_SIZE];
+    memset(json_output, 0, sizeof(json_output));
     fill_json_packet_from_tracker_payload(data, json_output);
 
     // Update hash context with sensor_blk data bytes
-    if (tc_sha256_update(&sha256_ctx, (const uint8_t *)json_output, sizeof(json_output)) != TC_CRYPTO_SUCCESS) {
+    if (tc_sha256_update(&sha256_ctx, json_output, strlen(json_output)) != TC_CRYPTO_SUCCESS) {
         printk("SHA256 update failed\n");
         return;
     }

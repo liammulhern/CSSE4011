@@ -8,6 +8,7 @@ Example
 
 python3 main.py --port /dev/ttyACM0 --baud 115200
 """
+from message_hash import compute_tracker_hash
 
 import argparse
 import logging
@@ -127,4 +128,12 @@ def process_messages(message: dict):
         set_device(serial_client_global, value)
 
 if __name__ == "__main__":
-    main()
+    # main()
+    full_msg = '''
+    {
+      "header": { },
+        "payload":{"timestamp":"2025-05-29T13:27:32","uptime":"61","location":{"latitude":"27.5001869","ns":"S","longitude":"153.0141296","ew":"E","altitude_m":"31.0"},"environment":{"temperature_c":"25.55","humidity_percent":"58.50","pressure_hpa":"102.1","gas_ppm":"14.00"},"acceleration":{"x_mps2":"0.038","y_mps2":"-0.268","z_mps2":"-9.690"}},
+      "signature": { }
+    }
+    '''
+    print("Tracker hash =", compute_tracker_hash(full_msg))
