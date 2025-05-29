@@ -79,7 +79,8 @@ def tracker_raw_data_ingest(gatewayeventraw: GatewayEventRaw, payload: Telemetry
     except ValueError:
         raise ValueError("Invalid timestamp format. Must be an ISO 8601 string.")
 
-    hash = gatewayeventraw.signature['hash']
+    print(gatewayeventraw.signature.get('value', ''))
+    hash = gatewayeventraw.signature.get('value', '')
 
     # 5. Create TrackerEvent instance
     tracker_event = TrackerEvent.objects.create(

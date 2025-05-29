@@ -92,7 +92,6 @@ const mergedColumns: ColumnDef<MergedData>[] = [
   { accessorKey: 'batch', header: ({ column }) => h(DataTableHeader, { column, title: 'Batch' }) },
   { accessorKey: 'owner_name', header: ({ column }) => h(DataTableHeader, { column, title: 'Owner' }) },
   { accessorKey: 'created_timestamp', header: ({ column }) => h(DataTableHeader, { column, title: 'Created At' }) },
-  { accessorKey: 'quantity', header: ({ column }) => h(DataTableHeader, { column, title: 'Quantity' }) },
   {
     id: 'actions',
     header: () => ' ',

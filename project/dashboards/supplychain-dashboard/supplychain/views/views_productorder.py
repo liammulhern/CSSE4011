@@ -11,6 +11,8 @@ from accounts.permissions import IsCompanyAdminOrReadOnly
 
 from datetime import timedelta
 
+from notifications.models import ProductNotification
+
 from supplychain.serialisers.serialiser_productorder import ProductOrderSerializer
 from supplychain.models import ProductOrder, ProductOrderStatus, ProductEvent, TrackerEvent, ComplianceEvent
 
@@ -155,13 +157,15 @@ class ProductOrderViewSet(viewsets.ModelViewSet):
         in_transit_delta = in_transit_end - in_transit_start
 
         # Compliance alerts up to each date
-        alert_end = ComplianceEvent.objects.filter(
-            product__owner__in=user.user_roles.values_list('role__company', flat=True),
+        alert_end = ProductNotification.objects.filter(
+            notication_type=ProductNotification.NOTICATION_TYPE_ALERT,
+            productevent__product__owner_id__in=user.user_companies.values_list('company_id', flat=True),
             timestamp__lte=end_dt
         ).count()
 
-        alert_start = ComplianceEvent.objects.filter(
-            product__owner__in=user.user_roles.values_list('role__company', flat=True),
+        alert_start = ProductNotification.objects.filter(
+            notication_type=ProductNotification.NOTICATION_TYPE_ALERT,
+            productevent__product__owner_id__in=user.user_companies.values_list('company_id', flat=True),
             timestamp__lte=start_dt
         ).count()
 

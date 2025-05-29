@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, computed, watch, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useRoute, useRouter } from 'vue-router'
 
 // Tabs & UI
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DateRangePicker } from '@/components/ui/daterange-picker'
+import { Button } from '@/components/ui/button'
 
 // Dashboard pieces
 import OrderStatusTable from '@/views/dashboard/pages/home/OrderStatusTable.vue'
@@ -17,6 +19,8 @@ import ProductEventMap from '@/components/maps/ProductEventMap.vue'
 import { useProductOrderStore } from '@/stores/productorder'
 import { useProductEventStore } from '@/stores/productevents'
 
+const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const orderStore = useProductOrderStore()
 const productEventStore = useProductEventStore()
@@ -66,6 +70,24 @@ watch(
   },
   { immediate: true, deep: true }
 )
+
+// Start on whatever ?tab= value is (or “overview” by default)
+const activeTab = ref<string>((route.query.tab as string) || 'overview')
+
+// Whenever they switch tabs, update the URL (so you can deep-link)
+watch(activeTab, (tab) => {
+  router.replace({
+    name: 'dashboard',
+    query: { ...route.query, tab }
+  })
+})
+
+// If someone lands on /dashboard?tab=notifications later, honor that
+watch(() => route.query.tab, (tab) => {
+  if (typeof tab === 'string' && tab !== activeTab.value) {
+    activeTab.value = tab
+  }
+})
 
 /**
  * Convert each ProductEvent into a LocationEvent for the map.
@@ -141,7 +163,7 @@ const mapCenter = computed<[number, number]>(() => {
       </div>
     </page-header>
 
-    <Tabs default-value="overview" class="space-y-4">
+    <Tabs default-value="overview" class="space-y-4" v-model="activeTab">
       <TabsList>
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="events">Events</TabsTrigger>
@@ -237,12 +259,15 @@ const mapCenter = computed<[number, number]>(() => {
       <TabsContent value="events" class="space-y-4">
         <Card>
           <CardContent>
-            <LiveEventFeed />
+            <ComplianceAlerts />
           </CardContent>
         </Card>
         <Card>
+          <CardHeader class="flex items-start justify-between pb-3">
+            <CardTitle class="text-lg font-medium">Notifications</CardTitle>
+          </CardHeader>
           <CardContent>
-            <ComplianceAlerts />
+            <LiveEventFeed />
           </CardContent>
         </Card>
       </TabsContent>
@@ -250,8 +275,12 @@ const mapCenter = computed<[number, number]>(() => {
       <!-- MAP: geo-tracking -->
       <TabsContent value="map" class="space-y-4">
         <Card>
-          <CardHeader class="flex items-start justify-between pb-3">
-            <CardTitle class="text-lg font-medium">Geo-Tracking Map</CardTitle>
+          <CardHeader class="flex flex-row items-start justify-between pb-3">
+            <CardTitle class="text-lg font-medium">Product Event Map</CardTitle>
+            <Button :disabled="loading" @click="store.fetchOrders()">
+              <Icon name="RefreshCw" class="pr-1" />
+              Refresh
+            </Button>
           </CardHeader>
           <CardContent class="min-h-[500px]">
             <ProductEventMap :event-groups="[]" :events-no-path="mapMarkers" :center="mapCenter" :zoom="12" />

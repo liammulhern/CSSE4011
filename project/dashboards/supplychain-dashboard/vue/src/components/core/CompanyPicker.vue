@@ -39,7 +39,9 @@ watch(selectedId, (val) => {
             <Avatar class="mr-2 h-5 w-5">
               <AvatarImage :src="`/api/companies/${uc.company.id}/avatar/`" alt="Company Logo"
                 class="grayscale opacity-80" />
-              <AvatarFallback>CP</AvatarFallback>
+              <AvatarFallback>
+                <Icon name="Factory" class="w-3 h-3"></Icon>
+              </AvatarFallback>
             </Avatar>
             {{ uc.company.name }}
           </SelectItem>

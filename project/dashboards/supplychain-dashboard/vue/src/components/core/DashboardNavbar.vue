@@ -25,9 +25,12 @@ import { useAuthStore } from '@/stores/auth'
 import { useProductNotificationStore } from '@/stores/productnotification'
 import { computed, onMounted } from 'vue'
 import { logout, isAuthenticated } from '@/services/auth'
+import { useRoute, useRouter } from 'vue-router'
 
 const store = useAppStore()
 const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 const notificationStore = useProductNotificationStore()
 
 // Load alerts on mount
@@ -49,6 +52,10 @@ const unackCount = computed(() => {
   return count > 99 ? '99+' : String(count)
 })
 
+const goToNotification = () => {
+  router.push({ name: 'dashboard', query: { tab: 'events' } })
+};
+
 const showBadge = computed(() => parseInt(unackCount.value) > 0 || unackCount.value === '99+')
 </script>
 
@@ -68,7 +75,7 @@ const showBadge = computed(() => parseInt(unackCount.value) > 0 || unackCount.va
     </Button>
     <div class="flex items-center">
       <!-- Bell icon with badge -->
-      <Button variant="outline" class="relative border-0 p-[6px] w-8 h-8">
+      <Button variant="outline" class="relative border-0 p-[6px] w-8 h-8" @click="goToNotification">
         <Bell />
         <span v-if="showBadge"
           class="absolute -top-1 -right-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold leading-none rounded-full bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))]">
@@ -95,11 +102,6 @@ const showBadge = computed(() => parseInt(unackCount.value) > 0 || unackCount.va
         </DropdownMenuTrigger>
         <DropdownMenuContent class="w-56 relative mr-4" v-if="isAuthenticated()">
           <DropdownMenuLabel>{{ username }}</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>
-            <User class="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem @click="logout()">
             <LogOut class="mr-2 h-4 w-4" />

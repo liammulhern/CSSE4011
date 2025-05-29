@@ -27,6 +27,9 @@ const data = computed<ProductNotification[]>(() => notificationStore.alerts)
 const loading = computed(() => notificationStore.alertsLoading)
 const error = computed(() => notificationStore.alertsError)
 
+// Compute only unacknowledged notifications
+const unackedData = computed(() => data.value.filter(n => !n.acknowledged_timestamp))
+
 // Selected IDs for acknowledgement
 const selectedIds = ref<number[]>([])
 const hasSelection = computed(() => selectedIds.value.length > 0)
@@ -43,41 +46,48 @@ async function acknowledgeSelected() {
   notificationStore.fetchAlerts()
 }
 
-// Table columns with selection checkbox, formatted date, and message with tooltip
+// Table columns including conditional checkbox column
 const columns: ColumnDef<ProductNotification>[] = [
   {
     id: 'select',
     header: ({ table }) =>
       h(Checkbox, {
-        checked: selectedIds.value.length === data.value.length && data.value.length > 0,
+        checked: selectedIds.value.length === unackedData.value.length && unackedData.value.length > 0,
         indeterminate:
-          selectedIds.value.length > 0 && selectedIds.value.length < data.value.length,
+          selectedIds.value.length > 0 && selectedIds.value.length < unackedData.value.length,
         'onUpdate:checked': (val: boolean) => {
-          selectedIds.value = val ? data.value.map((a) => a.id) : []
+          selectedIds.value = val ? unackedData.value.map(a => a.id) : []
         },
         ariaLabel: 'Select All',
       }),
     cell: ({ row }) => {
-      const id = row.original.id
+      const notif = row.original
+      // only show checkbox for unacknowledged
+      if (notif.acknowledged_timestamp) {
+        return h('span')
+      }
       return h(Checkbox, {
-        checked: selectedIds.value.includes(id),
+        checked: selectedIds.value.includes(notif.id),
         'onUpdate:checked': (val: boolean) => {
-          if (val) selectedIds.value.push(id)
-          else selectedIds.value = selectedIds.value.filter((i) => i !== id)
+          if (val) selectedIds.value.push(notif.id)
+          else selectedIds.value = selectedIds.value.filter(i => i !== notif.id)
         },
-        ariaLabel: `Select alert ${id}`,
+        ariaLabel: `Select alert ${notif.id}`,
         enableSorting: false,
         enableHiding: false,
       })
     },
   },
-  { accessorKey: 'id', header: ({ column }) => h(DataTableHeader, { column, title: 'Alert ID' }) },
-  { accessorKey: 'productevent', header: ({ column }) => h(DataTableHeader, { column, title: 'Event ID' }) },
+  { accessorKey: 'id', header: ({ column }) => h(DataTableHeader, { column, title: '#' }) },
   { accessorKey: 'order', header: ({ column }) => h(DataTableHeader, { column, title: 'Order #' }) },
   {
     accessorKey: 'requirement',
     header: ({ column }) => h(DataTableHeader, { column, title: 'Requirement' }),
-    cell: ({ getValue }) => h(Badge, { variant: 'warning' }, () => String(getValue())),
+    cell: ({ getValue }) => {
+      const val = getValue()
+      const label = val == null || val === '' ? 'N/A' : String(val)
+      return h(Badge, { variant: 'warning' }, () => label)
+    },
   },
   {
     accessorKey: 'timestamp',
@@ -89,7 +99,6 @@ const columns: ColumnDef<ProductNotification>[] = [
     header: ({ column }) => h(DataTableHeader, { column, title: 'Message' }),
     cell: ({ getValue }) => {
       const msg = String(getValue())
-      // Truncate with tooltip for long messages
       return h(
         Tooltip,
         {},
@@ -103,6 +112,23 @@ const columns: ColumnDef<ProductNotification>[] = [
         }
       )
     },
+  },
+  {
+    id: 'ackStatus',
+    header: ({ column }) => h(DataTableHeader, { column, title: 'Status' }),
+    cell: ({ row }) => {
+      const ack = row.original.acknowledged_timestamp
+      return ack
+        ? h(Badge, { variant: 'success' }, () => 'Acknowledged')
+        : h(Badge, { variant: 'destructive' }, () => 'Pending')
+    },
+  },
+  {
+    accessorKey: 'acknowledged_timestamp',
+    header: ({ column }) => h(DataTableHeader, { column, title: 'Ack Time' }),
+    cell: ({ row }) => row.original.acknowledged_timestamp
+      ? formatDateTime(row.original.acknowledged_timestamp)
+      : '-',
   },
 ]
 </script>

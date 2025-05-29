@@ -1,4 +1,5 @@
 from rest_framework_api_key.permissions import HasAPIKey
+from rest_framework.permissions import IsAuthenticated
 
 from accounts.permissions import IsCompanyAdminOrReadOnly
 
@@ -22,7 +23,7 @@ class TrackerNotificationCreateAPIView(generics.CreateAPIView):
       "message": "…"
     }
     """
-    permission_classes     = [HasAPIKey | IsCompanyAdminOrReadOnly]
+    permission_classes     = [IsCompanyAdminOrReadOnly | HasAPIKey]
     serializer_class       = TrackerNotificationSerializer
 
 
@@ -38,16 +39,19 @@ class ProductNotificationViewSet(
     retrieve: GET /api/product-notifications/{pk}/
     """
     serializer_class = ProductNotificationSerializer
-    permission_classes = [HasAPIKey | IsCompanyAdminOrReadOnly]
+    # permission_classes = [ IsCompanyAdminOrReadOnly | HasAPIKey ]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         # only notifications for products in companies the user belongs to
         qs = ProductNotification.objects.all()
+
         user = self.request.user
+
         return qs.filter(
-            productevent__product__owner__in=user.user_roles.values_list(
-                'role__company', flat=True
-            )
+            productevent__product__owner__in=user.user_companies.filter(
+                is_active=True
+            ).values_list('company_id', flat=True)
         )
 
     @action(detail=False, methods=['get'])
@@ -59,7 +63,9 @@ class ProductNotificationViewSet(
         qs = self.get_queryset().filter(
             notication_type=ProductNotification.NOTICATION_TYPE_ALERT
         )
+
         page = self.paginate_queryset(qs)
+
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
@@ -70,10 +76,11 @@ class ProductNotificationViewSet(
     @action(detail=True, methods=['post'])
     def acknowledge(self, request, pk=None):
         """
-        POST /api/product-notifications/{pk}/acknowledge/
+        POST /api/productnotifications/{pk}/acknowledge/
         Marks the notification as acknowledged by the current user.
         """
         notification = self.get_object()
+
         try:
             notification.acknowledge(request.user)
         except ValueError as e:

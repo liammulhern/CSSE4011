@@ -1,5 +1,6 @@
 import http from '@/utils/http'
 import type { AxiosResponse } from 'axios'
+import axios from 'axios'
 import router from '@/router'
 
 /** shape of the token endpoint’s JSON */
@@ -34,16 +35,16 @@ export function logout(): void {
 /**
  * Manually refresh the access token.
  */
-export async function refreshToken(): Promise<void> {
-  const refresh = localStorage.getItem('refresh');
+export async function refreshToken() {
+  const refresh = localStorage.getItem('refresh')
 
-  if (!refresh) throw new Error('No refresh token available');
+  if (!refresh) throw new Error("No refresh token")
 
-  const resp: AxiosResponse<{ access: string }> = await http.post('/api/token/refresh/', {
-    refresh,
-  });
+  const resp: AxiosResponse<{ access: string }> = await axios.post('/api/token/refresh/', { refresh })
 
-  localStorage.setItem('access', resp.data.access);
+  localStorage.setItem('access', resp.data.access)
+
+  http.defaults.headers.common['Authorization'] = `Bearer ${resp.data.access}`
 }
 
 

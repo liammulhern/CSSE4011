@@ -44,22 +44,7 @@ onMounted(() => {
 const columns: ColumnDef<ProductRow>[] = [
   {
     accessorKey: 'id',
-    header: ({ table }) =>
-      h(Checkbox, {
-        checked: table.getIsAllPageRowsSelected(),
-        'onUpdate:checked': (val: boolean) => table.toggleAllPageRowsSelected(val),
-        ariaLabel: 'Select All',
-        class: 'translate-y-0.5',
-      }),
-    cell: ({ row }) =>
-      h(Checkbox, {
-        checked: row.getIsSelected(),
-        'onUpdate:checked': (val: boolean) => row.toggleSelected(val),
-        ariaLabel: 'Select row',
-        class: 'translate-y-0.5',
-        enableSorting: false,
-        enableHiding: false,
-      }),
+    header: ({ column }) => h(DataTableHeader, { column, title: '#' }),
   },
   {
     accessorKey: 'key',

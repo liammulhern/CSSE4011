@@ -1,5 +1,5 @@
 <template>
-    <LMap ref="mapRef" :center="center" :zoom="zoom" :useGlobalLeaflet="false" style="width: 100%; height: 24rem;">
+    <LMap ref="mapRef" :center="center" :zoom="zoom" :useGlobalLeaflet="false" style="width: 100%; height: 30rem;">
         <!-- base tiles -->
         <LTileLayer :url="tileUrl" v-bind="tileOptions" />
 

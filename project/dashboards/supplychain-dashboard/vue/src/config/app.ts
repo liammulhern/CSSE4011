@@ -31,23 +31,6 @@ export const APP_MENU: Record<string, { name: string, routes: IDashboardMenus[] 
       },
     ],
   },
-  settings: {
-    name: 'General',
-    routes: [
-      {
-        path: 'user',
-        title: 'User',
-        icon: 'Users',
-        description: 'Manage User'
-      },
-      {
-        path: 'settings',
-        title: 'Settings',
-        icon: 'Settings2',
-        description: 'Settings'
-      },
-    ],
-  },
 };
 
 export const globalSearch = {

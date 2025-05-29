@@ -92,6 +92,35 @@ const product = computed(() => productStore.product)
 const loading = computed(() => productStore.loading)
 const error = computed(() => productStore.error)
 
+function printSheet() {
+  if (!qrSvg.value) return
+  // repeat the QR code 12 times in a 3x4 grid
+  const copies = Array(12).fill(qrSvg.value).join('')
+  const html = `
+    <html>
+      <head>
+<title>Product ${product.value.product_key} QR Code Sheet</title>
+        <style>
+          body { margin: 0; padding: 1rem; }
+          .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+          .grid svg { width: 100%; height: auto; }
+        </style>
+      </head>
+      <body>
+        <div class="grid">
+          ${copies}
+        </div>
+      </body>
+    </html>
+  `
+  const win = window.open('', '_blank', 'width=800,height=600')
+  if (!win) return
+  win.document.write(html)
+  win.document.close()
+  win.focus()
+  setTimeout(() => { win.print(); win.close() }, 300)
+}
+
 // Shape of each row in the merged components table
 interface CompRow {
   id: number
@@ -274,11 +303,14 @@ const mapCenter = computed<[number, number]>(() => {
         </Card>
 
         <Card class="mb-4">
-          <CardContent class="p-0">
+          <CardContent class="p-0 flex flex-col items-center">
             <div v-if="qrLoading" class="py-4 text-center">Loading QR code…</div>
             <div v-else-if="qrError" class="py-4 text-red-500">Error: {{ qrError }}</div>
             <div v-else-if="qrSvg" class="w-40 h-40 overflow-hidden qr-container bg-white rounded-sm" v-html="qrSvg" />
             <div v-else class="py-4 text-muted text-center">No QR code available.</div>
+            <Button variant="outline" @click="printSheet" :disabled="!qrSvg">
+              Print QR Sheet
+            </Button>
           </CardContent>
         </Card>
       </div>

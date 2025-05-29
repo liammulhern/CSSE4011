@@ -36,14 +36,14 @@ function iconFor(type: string) {
 
 // Handle click: navigate to notification detail
 function goToNotification(id: number) {
-  router.push({ name: 'productnotification_detail', params: { id: String(id) } })
+  router.push({ name: 'product_order_index', params: { id: String(id) } })
 }
 </script>
 
 <template>
-  <h2 class="text-lg font-medium pb-4"> Recent Notifications </h2>
+  <h2 class="text-lg font-medium pb-4"> Unacknowledged Alerts </h2>
   <div v-for="notif in recentNotifications" :key="notif.id">
-    <Card class="cursor-pointer hover:bg-muted px-0" @click="goToNotification(notif.id)">
+    <Card class="cursor-pointer hover:bg-muted px-0" @click="goToNotification(notif.order)">
       <CardContent class="flex flex-col items-start space-y-4 max-h-[150px] overflow-y-auto">
         <!-- Message and order -->
         <div class="flex flex-row items-center space-x-4">

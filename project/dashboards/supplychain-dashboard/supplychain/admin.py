@@ -134,7 +134,7 @@ class ProductOrderItemInline(admin.TabularInline):
     """
     model = ProductOrderItem
     extra = 1
-    raw_id_fields = ('product',)
+    fields = ('product',)
 
 
 class ProductOrderRequirementInline(admin.TabularInline):
@@ -142,8 +142,8 @@ class ProductOrderRequirementInline(admin.TabularInline):
     Inline for requirements linked to a ProductOrder.
     """
     model = ProductOrderRequirement
-    extra = 1
-    raw_id_fields = ('requirement',)
+    extra = 0
+    autocomplete_fields = ('requirement',)
 
 class ProductOrderStatusInline(admin.TabularInline):
     model = ProductOrderStatus
@@ -168,7 +168,7 @@ class ProductOrderAdmin(admin.ModelAdmin):
     readonly_fields = ('current_status',)
     fieldsets = (
         (None, {
-            'fields': ('supplier', 'receiver', 'order_timestamp', 'delivery_location', 'created_by')
+            'fields': ('order_number', 'supplier', 'receiver', 'order_timestamp', 'delivery_location', 'created_by')
         }),
         ('Status', {
             'fields': ('current_status',),
@@ -198,9 +198,10 @@ class SupplyChainRequirementAdmin(admin.ModelAdmin):
     )
     search_fields = (
         'name',
-        'owern__name',
+        'owner__name',
     )
-    raw_id_fields = (
+    autocomplete_fields = (
         'owner',
     )
     date_hierarchy = 'created_timestamp'
+

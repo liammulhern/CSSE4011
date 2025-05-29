@@ -1,5 +1,5 @@
 <template>
-	<MapEvents class="h-full border rounded" :tile-url="tileUrl" :tile-options="tileOpts"
+	<MapEvents class="h-full border rounded" map-class="h-100" :tile-url="tileUrl" :tile-options="tileOpts"
 		:event-groups="eventGroups" :events-no-path="standalones" :default-icon="iconDefault"
 		:icon-map="iconMap" :path-colors="pathColors" :center="center" :zoom="10" :key="tileUrl" />
 </template>

@@ -16,7 +16,6 @@ interface OrderData {
   placedAt: string
   status: string
   transitTime: string
-  actionNeeded: string
 }
 
 const router = useRouter();
@@ -35,7 +34,7 @@ const data = computed<OrderData[]>(() => {
     supplier: o.supplier_name,
     receiver: o.receiver_name,
     placedAt: new Date(o.order_timestamp).toLocaleString(),
-    status: o.current_status ?? 'N/A',
+    status: o.current_status,
     transitTime: (() => {
       const start = new Date(o.order_timestamp)
       let end = new Date()
@@ -50,7 +49,6 @@ const data = computed<OrderData[]>(() => {
       const days = Math.floor(hours / 24)
       return days > 0 ? `${days}d ${hours % 24}h` : `${hours}h`
     })(),
-    actionNeeded: o.current_status !== 'delivered' ? 'Yes' : 'No',
   }))
 })
 
@@ -62,47 +60,47 @@ onMounted(() => {
   store.fetchOrders();
 })
 
+const statusVariantMap: Record<string, Variant> = {
+  new: 'secondary',
+  on_hold: 'muted',
+  delayed: 'destructive',
+  shipped: 'primary',
+  delivered: 'success',
+}
+
 // Define columns as before...
 const columns: ColumnDef<OrderData>[] = [
-  {
-    accessorKey: 'id',
-    header: ({ table }) => h(Checkbox, {
-      checked: table.getIsAllPageRowsSelected(),
-      'onUpdate:checked': val => table.toggleAllPageRowsSelected(!!val),
-      ariaLabel: 'Select All',
-      class: 'translate-y-0.5',
-    }),
-    cell: ({ row }) => h(Checkbox, {
-      checked: row.getIsSelected(),
-      'onUpdate:checked': val => row.toggleSelected(!!val),
-      ariaLabel: 'Select row',
-      class: 'translate-y-0.5',
-      enableSorting: false,
-      enableHiding: false,
-    }),
-  },
-  { accessorKey: 'order_number', header: ({ column }) => h(DataTableHeader, { column, title: 'Order #' }) },
+  { accessorKey: 'id', header: ({ column }) => h(DataTableHeader, { column, title: '#' }) },
+  { accessorKey: 'order_number', header: ({ column }) => h(DataTableHeader, { column, title: 'Order Code' }) },
   { accessorKey: 'supplier', header: ({ column }) => h(DataTableHeader, { column, title: 'Supplier' }) },
   { accessorKey: 'receiver', header: ({ column }) => h(DataTableHeader, { column, title: 'Receiver' }) },
   { accessorKey: 'placedAt', header: ({ column }) => h(DataTableHeader, { column, title: 'Placed At' }) },
   {
     accessorKey: 'status',
     header: ({ column }) => h(DataTableHeader, { column, title: 'Status' }),
-    cell: ({ row }) => h(Badge, {
-      variant: row.getValue() === 'delivered' ? 'success' : 'warning'
-    }, () => String(row.getValue()))
+    cell: ({ row }) => {
+      const status = String(row.getValue('status'))  // e.g. 'new', 'delivered', etc.
+      const variant = statusVariantMap[status] ?? 'secondary'
+      // Capitalize or humanize the label if you like:
+      const label = status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
+
+      return h(
+        Badge,
+        { variant },
+        () => label
+      )
+    },
   },
-  { accessorKey: 'transitTime', header: 'Transit Time' },
   {
-    accessorKey: 'actionNeeded',
-    header: ({ column }) => h(DataTableHeader, { column, title: 'Action Needed?' }),
-    cell: ({ getValue }) => h('span', {
-      class: getValue() === 'Yes' ? 'text-red-600 font-semibold' : 'text-green-600'
-    }, getValue())
+    accessorKey: 'transitTime',
+    header: ({ column }) => h(DataTableHeader, {
+      column,
+      title: 'Transit Time'
+    })
   },
   {
     id: 'actions',
-    header: () => ' ',
+    header: () => 'Actions',
     cell: ({ row }) => h(Button, {
       variant: 'ghost',
       onClick: () => router.push({ name: 'product_order_index', params: { id: String(row.original.id) } })
