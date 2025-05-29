@@ -52,7 +52,7 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
         flash_vars.read_size++;
         LOG_INF("Read: temp: %u   press: %u    hum: %u    gas: %u    x_accel: %d    y_accel: %d    z_accel: %d", 
         sensors.temp, sensors.press, sensors.hum, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
-        LOG_INF("Read: time: %u   uptime: %d    lat: %f   lon: %f   alt: %f", 
+        LOG_INF("Read: time: %u   uptime: %u    lat: %f   lon: %f   alt: %f", 
         sensors.time, sensors.uptime, (double)sensors.lat, (double)sensors.lon, (double)sensors.alt);
         pack_sensor_data(&sensors);
     }
@@ -104,11 +104,11 @@ gnss_goto:
             goto gnss_goto;
         }
     }
-    
+    sensors.uptime = k_uptime_seconds();
     flash_write_sensor(flash_dev, write_block_size, sensors);
     LOG_INF("Write: temp: %u   press: %u    hum: %u    gas: %u    x_accel: %d    y_accel: %d    z_accel: %d", 
         sensors.temp, sensors.press, sensors.hum, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
-    LOG_INF("Write: time: %u   uptime: %d    lat: %f   lon: %f   alt: %f", 
+    LOG_INF("Write: time: %u   uptime: %u    lat: %f   lon: %f   alt: %f", 
         sensors.time, sensors.uptime, (double)sensors.lat, (double)sensors.lon, (double)sensors.alt);
 }
 
@@ -165,12 +165,12 @@ int main(void) {
         LOG_WRN("Error in init, shutting down");
     }
     write_init_consts(flash_dev, write_block_size);
-   k_msleep(500);
+   k_msleep(1500);
     while(1) {  
         // Loop occurs on every wakeup from idle or after every occurance
         if (get_rtc_tick()) {
             // Woke from rtc
-            LOG_INF("Woke from rtc");
+            //LOG_INF("Woke from rtc");
             red_led();
             write_loop(flash_dev, write_block_size);
             set_rtc_tick(0);

@@ -26,7 +26,7 @@ struct flash_consts {
 
 struct sensor_blk {
     uint32_t time;
-    int32_t uptime;
+    uint32_t uptime;
     float lat;
     float lon;
     float alt;
