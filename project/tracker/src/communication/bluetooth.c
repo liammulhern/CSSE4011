@@ -203,13 +203,13 @@ static void fill_json_packet_from_tracker_payload(const struct sensor_blk *data,
         data->lon,
         data->ew,
         data->alt,
-        data->temp,
-        data->hum,
-        data->press,
-        data->gas,
-        data->x_accel,
-        data->y_accel,
-        data->z_accel
+        data->temp / 100.0,
+        data->hum / 100.0,
+        data->press / 10.0,
+        data->gas / 100.0,
+        data->x_accel / 1000.0,
+        data->y_accel / 1000.0,
+        data->z_accel / 1000.0
     );
 
     if (ret > 0 && ret < JSON_BUFFER_SIZE) {
