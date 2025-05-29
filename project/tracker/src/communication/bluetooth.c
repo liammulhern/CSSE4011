@@ -161,7 +161,7 @@ void hash_sensor_blk(const struct sensor_blk *data, uint8_t *hash_buffer) {
         return;
     }
 
-    char json_output[JSON_BUFFER_SIZE];
+    char json_output[JSON_BUFFER_SIZE] = {0};
     fill_json_packet_from_tracker_payload(data, json_output);
 
     // Update hash context with sensor_blk data bytes
