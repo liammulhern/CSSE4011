@@ -175,6 +175,8 @@ void hash_sensor_blk(const struct sensor_blk *data, uint8_t *hash_buffer) {
         printk("SHA256 final failed\n");
         return;
     }
+
+    print_sha256_digest(hash_buffer);
 }
 
 static void fill_json_packet_from_tracker_payload(const struct sensor_blk *data, char* json_output) {
