@@ -162,7 +162,7 @@ void hash_sensor_blk(const struct sensor_blk *data, uint8_t *hash_buffer) {
     }
 
     char json_output[JSON_BUFFER_SIZE];
-    fill_json_packet_from_tracker_payload(data, &json_output);
+    fill_json_packet_from_tracker_payload(data, json_output);
 
     // Update hash context with sensor_blk data bytes
     if (tc_sha256_update(&sha256_ctx, (const uint8_t *)json_output, sizeof(json_output)) != TC_CRYPTO_SUCCESS) {
@@ -190,7 +190,7 @@ static void fill_json_packet_from_tracker_payload(const struct sensor_blk *data,
         return;
     }
 
-    int ret = snprintf(json_output, sizeof(json_output),
+    int ret = snprintf(json_output, JSON_BUFFER_SIZE,
         JSON_FORMAT,
         timeinfo.tm_year + 1900,
         timeinfo.tm_mon + 1,
