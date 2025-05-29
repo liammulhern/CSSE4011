@@ -1,0 +1,7 @@
+target_sources(app PRIVATE http_get.c)
+target_sources(app PRIVATE wifi.c)
+target_sources(app PRIVATE parser.c)
+target_sources(app PRIVATE gui.c)
+target_sources(app PRIVATE main.c)
+target_sources(app PRIVATE haptics.c)
+target_sources(app PRIVATE cli.c)

@@ -1,0 +1,37 @@
+FROM python:3.11-slim as base
+
+# Install any OS-level dependencies (e.g. libpq for psycopg2)
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends build-essential libpq-dev
+RUN rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user (optional, but recommended)
+RUN useradd --create-home appuser
+
+WORKDIR /home/appuser/pathledger-backend
+
+# Install uv for dependency management
+RUN pip install --no-cache-dir uv
+
+# Copy project metadata (PEP 621) and lockfile
+COPY pyproject.toml uv.lock* ./
+
+# Sync project environment based on pyproject.toml + uv.lock
+RUN uv sync
+
+# Development image
+FROM base AS dev
+# expose for debug
+EXPOSE 8000 5678
+CMD ["uv", "run", "python", "-m", "debugpy", "--listen", "0.0.0.0:5678", "manage.py", "runserver", "0.0.0.0:8000"]
+
+# # Production image
+FROM base AS prod
+COPY . .
+EXPOSE 8000
+
+# Use Gunicorn WSGI server with 3 workers
+CMD ["gunicorn", \
+     "supplychain_dashboard.wsgi:application", \
+     "--bind", "0.0.0.0:8000", \
+     "--workers", "3"]

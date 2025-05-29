@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include <bluetooth.h>
+#include <json.h>
 
 #define DEV_ID 2
 #define PACKED_DATA_LEN 68
@@ -67,6 +68,7 @@ extern int start_advertising(void);
 extern int stop_advertising(void);
 extern int stop_advertising_and_disconnect();
 void tracker_thread(void);
+static void fill_json_packet_from_tracker_payload(const struct sensor_blk *data, char* json_output);
 
 // Advertising parameters
 struct bt_le_adv_param adv_params = {
@@ -159,8 +161,11 @@ void hash_sensor_blk(const struct sensor_blk *data, uint8_t *hash_buffer) {
         return;
     }
 
+    char json_output[JSON_BUFFER_SIZE];
+    fill_json_packet_from_tracker_payload(data, &json_output);
+
     // Update hash context with sensor_blk data bytes
-    if (tc_sha256_update(&sha256_ctx, (const uint8_t *)data, sizeof(struct sensor_blk)) != TC_CRYPTO_SUCCESS) {
+    if (tc_sha256_update(&sha256_ctx, (const uint8_t *)json_output, sizeof(json_output)) != TC_CRYPTO_SUCCESS) {
         printk("SHA256 update failed\n");
         return;
     }
@@ -168,6 +173,50 @@ void hash_sensor_blk(const struct sensor_blk *data, uint8_t *hash_buffer) {
     // Finalize the hash computation and output the result into digest buffer
     if (tc_sha256_final(hash_buffer, &sha256_ctx) != TC_CRYPTO_SUCCESS) {
         printk("SHA256 final failed\n");
+        return;
+    }
+}
+
+
+static void fill_json_packet_from_tracker_payload(const struct sensor_blk *data, char* json_output) {
+
+    time_t raw_time = (time_t)data->time;
+    struct tm timeinfo;
+
+    // Convert Unix timestamp to broken-down UTC time (GMT)
+    // Use gmtime_r for thread safety, or gmtime if not available
+    if (gmtime_r(&raw_time, &timeinfo) == NULL) {
+        printk("Failed to convert timestamp\n");
+        return;
+    }
+
+    int ret = snprintf(json_output, sizeof(json_output),
+        JSON_FORMAT,
+        timeinfo.tm_year + 1900,
+        timeinfo.tm_mon + 1,
+        timeinfo.tm_mday,
+        timeinfo.tm_hour,
+        timeinfo.tm_min,
+        timeinfo.tm_sec,
+        data->uptime,
+        data->lat,
+        data->ns,
+        data->lon,
+        data->ew,
+        data->alt,
+        data->temp,
+        data->hum,
+        data->press,
+        data->gas,
+        data->x_accel,
+        data->y_accel,
+        data->z_accel
+    );
+
+    if (ret > 0 && ret < sizeof(json_output)) {
+        printk("%s\n", json_output);
+    } else {
+        printk("JSON encoding failed or buffer too small.\n");
         return;
     }
 }

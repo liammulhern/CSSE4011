@@ -1,0 +1,110 @@
+
+/* admin_custom.css */
+
+/* ———————————————————————————————— */
+/*  Light-mode overrides             */
+/* ———————————————————————————————— */
+html[data-theme="light"], :root {
+  /* Primary / Accent */
+  --primary:           hsl(21.1, 72.2%, 53.5%);
+  --accent:            hsl(21.1, 72.2%, 53.5%);
+  --primary-fg:        hsl(36.9,100%, 97.5%);
+
+  /* Secondary */
+  --secondary:         hsl(20,  4.1%, 71%);
+  --secondary-fg:      hsl(15,  5.6%, 14.1%);
+
+  /* Body background & text */
+  --body-bg:           hsl(0,   0%, 100%);
+  --body-fg:           hsl(224,71.4%, 4.1%);
+  --body-quiet-color:  hsl(220, 8.9%, 46.1%);
+  --body-medium-color: hsl(220,14.3%, 95.9%);  /* muted ≈ darkened-bg */
+  --body-loud-color:   hsl(224,71.4%, 4.1%);
+
+  /* Header */
+  --header-bg:         var(--primary);
+  --header-color:      var(--primary-fg);
+  --header-branding-color: var(--accent);
+  --header-link-color: var(--primary-fg);
+
+  /* Breadcrumbs */
+  --breadcrumbs-bg:    var(--secondary);
+  --breadcrumbs-fg:    var(--body-quiet-color);
+  --breadcrumbs-link-fg: var(--body-bg);
+
+  /* Links */
+  --link-fg:           var(--primary);
+  --link-hover-color:  hsl(21.1, 72.2%, 43.5%);
+  --link-selected-fg:  var(--secondary);
+
+  /* Borders & separators */
+  --hairline-color:    hsl(220,13%, 91%);
+  --border-color:      var(--hairline-color);
+
+  /* Messages */
+  --message-success-bg: hsl(120,25%,95%);
+  --message-warning-bg: var(--primary);
+  --message-error-bg:   hsl(0,  84.2%,60.2%);
+  --error-fg:           hsl(0,  84.2%,60.2%);
+
+  /* Tables / selection */
+  --darkened-bg:       hsl(220,14.3%,95.9%);
+  --selected-bg:       var(--primary);
+  --selected-row:      var(--primary);
+
+  /* Buttons */
+  --button-bg:         var(--primary);
+  --button-fg:         var(--primary-fg);
+  --button-hover-bg:   hsl(21.1,72.2%,43.5%);
+  --default-button-bg: hsl(20,4.1%,61%);
+  --default-button-hover-bg: hsl(20,4.1%,51%);
+  --close-button-bg:   hsl(15,5.6%,14.1%);
+  --close-button-hover-bg: hsl(15,5.6%,24.1%);
+  --delete-button-bg:  hsl(0,84.2%,60.2%);
+  --delete-button-hover-bg: hsl(0,84.2%,50.2%);
+
+  /* Object-tools (top-right actions) */
+  --object-tools-bg:        var(--close-button-bg);
+  --object-tools-fg:        var(--button-fg);
+  --object-tools-hover-bg:  var(--close-button-hover-bg);
+}
+
+/* ———————————————————————————————— */
+/*  Dark-mode overrides              */
+/*————————————————————————————————*/
+html[data-theme="dark"] {
+  /* Swap body bg & fg */
+  --body-bg:           hsl(224,71.4%, 4.1%);
+  --body-fg:           hsl(210,20%, 98%);
+  --body-quiet-color:  hsl(217.9,10.6%,64.9%);
+  --body-medium-color: hsl(217.9,10.6%,64.9%);
+  --body-loud-color:   var(--body-fg);
+
+  /* Keep primary the same for contrast */
+  --primary:           hsl(21.1,72.2%,53.5%);
+  --primary-fg:        hsl(36.9,100%,97.5%);
+
+  /* Secondary darker */
+  --secondary:         hsl(17.1,3.1%,56.3%);
+  --secondary-fg:      hsl(30,25%,98.4%);
+
+  /* Header & breadcrumbs */
+  --header-bg:         var(--primary);
+  --header-color:      var(--primary-fg);
+  --header-branding-color: var(--accent);
+  --header-link-color: var(--primary-fg);
+
+  --breadcrumbs-bg:    hsl(215,27.9%,16.9%);
+  --breadcrumbs-fg:    hsl(30,25%,98.4%);
+  --breadcrumbs-link-fg: var(--body-bg);
+
+  /* Borders & backgrounds */
+  --hairline-color:    var(--border-color);
+  --border-color:      hsl(215,27.9%,16.9%);
+  --darkened-bg:       hsl(215,27.9%,16.9%);
+
+  /* Close / object-tools */
+  --close-button-bg:   hsl(217.9,10.6%,64.9%);
+  --close-button-hover-bg: hsl(217.9,10.6%,74.9%);
+}
+

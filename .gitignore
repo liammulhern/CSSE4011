@@ -147,3 +147,5 @@ build/
 *.venv/
 __pycache__/
 .env
+env.h
+*.zip

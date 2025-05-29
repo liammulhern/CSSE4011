@@ -1,3 +1,0 @@
-pyserial          # for serial port I/O
-requests          # for HTTP POSTs
-prompt_toolkit

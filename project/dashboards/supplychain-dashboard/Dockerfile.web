@@ -1,0 +1,44 @@
+# builder
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+# install deps
+COPY vue/package*.json ./
+RUN npm ci
+
+# build into /app/dist
+COPY vue/ .
+RUN npm run build
+
+
+# prod
+FROM node:18-alpine AS prod
+WORKDIR /app
+
+# install a tiny static‐file server
+RUN npm install -g serve
+
+# copy build artifacts
+COPY --from=builder /app/dist /app/dist
+
+EXPOSE 3000
+CMD ["serve", "-s", "dist", "-l", "3000"]
+
+
+# dev
+FROM node:18-alpine AS dev
+WORKDIR /app
+
+# install deps once
+COPY vue/package*.json ./
+RUN npm ci
+
+# copy source
+COPY vue/ .
+
+# expose Vite default dev port
+EXPOSE 5173
+
+# run Vite in dev mode
+CMD ["npm", "run", "dev"]
+

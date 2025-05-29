@@ -17,7 +17,8 @@ manifest:
     - name: zephyr
       repo-path: zephyr
       revision: main
-      import: true 
+    - name: lvgl
+      path: modules/lib/gui/lvgl
     - name: west-driver-init
       remote: liammulhern
       path: modules/west-driver-init

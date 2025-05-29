@@ -7,24 +7,35 @@ services:
       POSTGRES_DB: dpp_db
     volumes:
       - db_data:/var/lib/postgresql/data
-  web:
+  pathledger-backend:
     build:
       context: .
       target: dev
+      dockerfile: Dockerfile.django
     ports:
       - "8000:8000"
       - "5678:5678"
     volumes:
-      - .:/home/appuser
+      - .:/home/appuser/pathledger-backend
     env_file:
       - .env
     depends_on:
       - db
-    # use debugpy to launch Django
-    command: >
-      uv run python -Xfrozen_modules=off -m debugpy
-      --listen 0.0.0.0:5678
-      manage.py runserver 0.0.0.0:8000
-
+  pathledger-fronted:
+    build:
+      context: .
+      target: dev
+      dockerfile: Dockerfile.web
+    volumes:
+      - ./vue:/app
+      - /app/node_modules
+    environment:
+      - HOST=0.0.0.0
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - "5173:5173"
+    command: ["npm", "run", "dev"]
+    depends_on:
+      - pathledger-backend
 volumes:
   db_data:

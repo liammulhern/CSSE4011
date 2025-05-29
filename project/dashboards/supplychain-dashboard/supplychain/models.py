@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+from iota_sdk import HexStr
+
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
 from accounts.models import Company
 
-import uuid
+from supplychain.scripts import iota_client
 
+import json
+import uuid
+import hashlib
 
 class Tracker(models.Model):
     """
@@ -20,11 +25,11 @@ class Tracker(models.Model):
     )
 
     owner = models.ForeignKey(
-        'accounts.Company',
+        Company,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='products',
+        related_name='trackers',
         help_text="Current owning company."
     )
 
@@ -36,8 +41,45 @@ class Tracker(models.Model):
 
     class Meta:
         ordering = ['created_timestamp']
-        verbose_name = "Product"
-        verbose_name_plural = "Products"
+        verbose_name = "Tracker"
+        verbose_name_plural = "Trackers"
+        indexes = [
+            models.Index(fields=['tracker_key']),
+        ]
+
+
+class Gateway(models.Model):
+    """
+    Tracker device that collects sensor data for products 
+    """
+    gateway_key = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Unique identifier (e.g. NFC/QR code) for the gateway."
+    )
+
+    owner = models.ForeignKey(
+        Company,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='gateways',
+        help_text="Current owning company."
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this tracker record was created."
+    )
+
+
+    class Meta:
+        ordering = ['created_timestamp']
+        verbose_name = "Gatway"
+        verbose_name_plural = "Gatways"
+        indexes = [
+            models.Index(fields=['gateway_key']),
+        ]
 
 
 class ProductType(models.Model):
@@ -71,7 +113,7 @@ class ProductType(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='product_types',
+        related_name='product_types_owner',
         help_text="Current owning company."
     )
 
@@ -80,7 +122,7 @@ class ProductType(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='recorded_events',
+        related_name='recorded_producttypes',
         help_text="User who recorded this event."
     )
 
@@ -106,8 +148,10 @@ class Product(models.Model):
     product_type = models.ForeignKey(
         ProductType,
         on_delete=models.PROTECT,
-        related_name="instances",
-        help_text="The SKU / type this serial belongs to."
+        related_name="products",
+        help_text="The SKU / type this serial belongs to.",
+        null=True,
+        blank=True
     )
 
     batch = models.CharField(
@@ -146,7 +190,7 @@ class Product(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='recorded_events',
+        related_name='recorded_products',
         help_text="User who recorded this event."
     )
 
@@ -163,27 +207,52 @@ class Product(models.Model):
         return self.product_key
 
 
-class ProductEvent(models.Model):
+class TrackerEvent(models.Model):
     """
-    Records an event in a product's lifecycle, anchored on-chain/off-chain.
+    Records an event for a tracker anchored on-chain/off-chain.
     """
-    id = models.UUIDField(
+    EVENT_TYPE_TELEMETRY = "telemetry"
+
+    EVENT_TYPE_CHOICES = [
+        (EVENT_TYPE_TELEMETRY, "Telemetry"),
+    ]
+
+    message_id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
         editable=False,
         help_text="Unique event identifier."
     )
 
-    product = models.ForeignKey(
-        Product,
-        on_delete=models.CASCADE,
-        related_name='events',
-        help_text="Product to which this event applies."
+    gateway = models.ForeignKey(
+        Gateway,
+        on_delete=models.SET_NULL,
+        related_name='trackerevent_gateways',
+        help_text="Gateway that collected this event.",
+        null=True,
+        blank=True,
+    )
+
+    tracker = models.ForeignKey(
+        Tracker,
+        on_delete=models.SET_NULL,
+        related_name='trackeevent_trackers',
+        help_text="Tracker to which this event applies.",
+        null=True,
+        blank=True,
     )
 
     event_type = models.CharField(
         max_length=50,
+        choices=EVENT_TYPE_CHOICES,
         help_text="Type of event (e.g. 'manufactured', 'temperature_reading')."
+    )
+
+    payload = models.JSONField(
+        help_text=(
+            'JSON parameters for this payload. '
+            'E.g. {"deviceId": 1.0,"nominal": 4.0,"max": 8.0} '
+        )
     )
 
     timestamp = models.DateTimeField(
@@ -195,9 +264,138 @@ class ProductEvent(models.Model):
         help_text="SHA-256 hash of the raw payload."
     )
 
-    data_uri = models.TextField(
+    block_id = models.CharField(
+        max_length=64,
+        help_text="IOTA block id of the onchain hash.",
         blank=True,
-        help_text="URI to off-chain storage (e.g. CosmosDB link or IPFS CID)."
+        null=True,
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this record was created in the dashboard database."
+    )
+
+    class Meta:
+        ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['event_type', 'timestamp']),
+        ]
+        verbose_name = "Tracker Event"
+        verbose_name_plural = "Tracker Events"
+
+    def __str__(self):
+        return f"{self.event_type} @ {self.timestamp.isoformat()} for {self.tracker}"
+
+    def compute_hash(self) -> HexStr:
+        """
+            SHA-256 over payload and message with sorted keys.
+
+            Returns:
+                HexString for hashed ProductEvent
+
+                e.g. "0x12398a12bc14e09"
+        """
+        serialized_key: str = json.dumps(
+            {
+                "message_id": self.message_id, 
+                "payload": self.payload
+            },
+            sort_keys=True
+        )
+
+        serialized_key_enc = hashlib.sha256(serialized_key.encode("utf-8")).hexdigest()
+
+        return HexStr(serialized_key_enc)
+
+    def verify_block_hash(self) -> bool:
+        """
+            Verify that an IOTA block has the same hash as the 
+            database model.
+
+            Args:
+                block: IOTA blockchain 
+
+            Return:
+                True if the on-chain hash matches the off-chain model
+        """
+        chain_message_id, chain_hash = iota_client.iota_get_block_data(self.message_id)
+
+        model_hash: HexStr  = self.compute_hash()
+
+        return chain_message_id == self.message_id and model_hash == chain_hash
+
+    def anchor_on_iota(self) -> str:
+        """
+        Publish zero‐value tagged data to IOTA blockchain.
+
+        Args:
+            None
+
+        Returns:
+            BlockId of stored block
+        """
+        block_id, _ = iota_client.iota_build_and_post_block(
+            message_id=self.message_id,
+            data_hex=self.data_hash,
+        )
+
+        self.block_id = block_id
+        self.save()
+
+        return block_id
+
+
+class ProductEvent(models.Model):
+    """
+    Records an event in a product's lifecycle, anchored on-chain/off-chain.
+    """
+    EVENT_TYPE_MANUFACTURED = "manufactured"
+    EVENT_TYPE_TELEMETRY = "telemetry"
+
+    EVENT_TYPE_CHOICES = [
+        (EVENT_TYPE_MANUFACTURED, "Manufactured"),
+        (EVENT_TYPE_TELEMETRY, "Telemetry"),
+    ]
+
+    message_id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text="Unique event identifier."
+    )
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='products',
+        help_text="Product to which this event applies."
+    )
+
+    trackerevent = models.ForeignKey(
+        TrackerEvent,
+        on_delete=models.SET_NULL,
+        related_name='trackerevents',
+        help_text="Tracker event to which this was created from.",
+        null=True,
+        blank=True,
+    )
+
+    event_type = models.CharField(
+        choices=EVENT_TYPE_CHOICES,
+        max_length=50,
+        help_text="Type of event (e.g. 'manufactured', 'temperature_reading')."
+    )
+
+    payload = models.JSONField(
+        help_text=(
+            'JSON parameters for this payload. '
+            'E.g. {"deviceId": 1.0,"nominal": 4.0,"max": 8.0} '
+        )
+    )
+
+    timestamp = models.DateTimeField(
+        help_text="When the event occurred."
     )
 
     recorded_by = models.ForeignKey(
@@ -205,7 +403,7 @@ class ProductEvent(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='recorded_events',
+        related_name='recorded_productevents',
         help_text="User who recorded this event."
     )
 
@@ -218,7 +416,6 @@ class ProductEvent(models.Model):
         ordering = ['timestamp']
         indexes = [
             models.Index(fields=['product', 'timestamp']),
-            models.Index(fields=['data_hash']),
         ]
         verbose_name = "Product Event"
         verbose_name_plural = "Product Events"
@@ -246,11 +443,6 @@ class ProductComposition(models.Model):
         help_text="A product used as an ingredient/part."
     )
 
-    quantity = models.PositiveIntegerField(
-        default=1,
-        help_text="How many units of the component are used in one unit of the parent."
-    )
-
     created_timestamp = models.DateTimeField(
         auto_now_add=True,
         help_text="When this composition entry was created."
@@ -263,7 +455,7 @@ class ProductComposition(models.Model):
         ordering = ['parent', 'component']
 
     def __str__(self):
-        return f"{self.quantity} × {self.component.product_key} → {self.parent.product_key}"
+        return f"{self.component.product_key} → {self.parent.product_key}"
 
 
 class CustodyTransfer(models.Model):
@@ -328,6 +520,47 @@ class CustodyTransfer(models.Model):
         )
 
 
+class ComplianceEvent(models.Model):
+    """
+    Records a compliance event for a product, such as passing a quality check.
+    """
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='compliance_events',
+        help_text="Product to which this event applies."
+    )
+
+    event_type = models.CharField(
+        max_length=50,
+        help_text="Type of compliance event (e.g. 'quality_check_passed')."
+    )
+
+    payload = models.JSONField(
+        help_text=(
+            'JSON parameters for this payload. '
+            'E.g. {"deviceId": 1.0,"nominal": 4.0,"max": 8.0} '
+        )
+    )
+
+    timestamp = models.DateTimeField(
+        help_text="When the event occurred."
+    )
+
+    created_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this record was created in the dashboard database."
+    )
+
+    class Meta:
+        ordering = ['timestamp']
+        indexes = [
+            models.Index(fields=['product', 'timestamp']),
+        ]
+        verbose_name = "Compliance Event"
+        verbose_name_plural = "Compliance Events"
+
+
 class SupplyChainRequirement(models.Model):
     """
     Defines a requirement (e.g., temperature, humidity) that products must meet.
@@ -380,7 +613,7 @@ class SupplyChainRequirement(models.Model):
         help_text='Type of data this requirement expects.'
     )
 
-    company = models.ForeignKey(
+    owner = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
         related_name='supply_requirements',
@@ -419,6 +652,11 @@ class ProductOrder(models.Model):
     """
     An order of one or more products, placed by one company and received by another.
     """
+    order_number = models.CharField(
+        max_length=100,
+        help_text='Product order number.'
+    )
+
     supplier = models.ForeignKey(
         Company,
         on_delete=models.CASCADE,
@@ -456,6 +694,14 @@ class ProductOrder(models.Model):
         blank=True,
         related_name='trackers',
         help_text='Supply chain tracker/s that apply to this order.'
+    )
+
+    products = models.ManyToManyField(
+        Product,
+        through='ProductOrderItem',
+        blank=True,
+        related_name='product_orders',
+        help_text='Products included in this order.'
     )
 
     created_timestamp = models.DateTimeField(auto_now_add=True)
@@ -521,10 +767,6 @@ class ProductOrderItem(models.Model):
         help_text='The specific product being ordered.'
     )
 
-    quantity = models.PositiveIntegerField(
-        help_text='Number of units ordered.'
-    )
-
     class Meta:
         verbose_name = 'Product Order Item'
         verbose_name_plural = 'Product Order Items'
@@ -532,7 +774,7 @@ class ProductOrderItem(models.Model):
         ordering = ['order']
 
     def __str__(self):
-        return f'{self.quantity} × {self.product.product_key}'
+        return f'{self.product.product_key}'
 
 
 class ProductOrderRequirement(models.Model):
