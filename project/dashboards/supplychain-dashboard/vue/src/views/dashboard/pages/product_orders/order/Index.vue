@@ -2,6 +2,7 @@
 import { h, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useProductOrderStore } from '@/stores/productorder'
+import { useProductEventStore } from '@/stores/productevents'
 import { useProductStore } from '@/stores/product'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -18,12 +19,14 @@ const route = useRoute()
 const router = useRouter()
 const orderStore = useProductOrderStore()
 const productStore = useProductStore()
+const productEventStore = useProductEventStore()
 const orderId = route.params.id as string
 
 // Fetch the order on mount
 onMounted(async () => {
   await orderStore.fetchOrder(orderId)
   await productStore.fetchProductsByOrder(orderId)
+  await productEventStore.fetchEventsByProductOrder(orderId)
 })
 
 function formatDateTime(iso: string) {
@@ -126,6 +129,71 @@ const statusColumns: ColumnDef<StatusData>[] = [
   { accessorKey: 'timestamp', header: 'Timestamp' },
   { accessorKey: 'created_by', header: 'By User' },
 ]
+
+/**
+ * Convert each ProductEvent into a LocationEvent for the map.
+ *  - turn lat/lng strings + N/S, E/W into numbers
+ *  - build a little HTML snippet for environment & acceleration
+ */
+const mapMarkers = computed(() => {
+  return productEventStore.events
+    .map(e => {
+      const p = e.payload || {}
+      const loc = p.location
+      if (!loc || !loc.latitude || !loc.longitude) {
+        // can’t place a marker without lat/lng
+        return null
+      }
+
+      const lat = parseFloat(loc.latitude) * (loc.ns === 'S' ? -1 : 1)
+      const lng = parseFloat(loc.longitude) * (loc.ew === 'W' ? -1 : 1)
+
+      // build description only if we have data
+      let desc = ''
+
+      if (p.environment) {
+        const env = p.environment
+        desc += `
+          <div><strong>Environment</strong><br/>
+            ${env.temperature_c ? `Temp: ${env.temperature_c} °C<br/>` : ''}
+            ${env.humidity_percent ? `Humidity: ${env.humidity_percent}%<br/>` : ''}
+            ${env.pressure_hpa ? `Pressure: ${env.pressure_hpa} hPa<br/>` : ''}
+            ${env.gas_ppm ? `Gas: ${env.gas_ppm}` : ''}
+          </div>`
+      }
+
+      if (p.acceleration) {
+        const a = p.acceleration
+        desc += `
+          <div style="margin-top:6px;"><strong>Acceleration</strong><br/>
+            ${a.x_mps2 ? `X: ${a.x_mps2} m/s²<br/>` : ''}
+            ${a.y_mps2 ? `Y: ${a.y_mps2} m/s²<br/>` : ''}
+            ${a.z_mps2 ? `Z: ${a.z_mps2} m/s²` : ''}
+          </div>`
+      }
+
+      return {
+        lat,
+        lng,
+        title: e.event_type,
+        description: desc || undefined,
+        type: e.event_type,
+      }
+    })
+    .filter((m): m is { lat: number; lng: number; title: string; description?: string; type: string } => m !== null)
+})
+
+/**
+ * Center the map on the *last* event (or fallback).
+ */
+const mapCenter = computed<[number, number]>(() => {
+  if (mapMarkers.value.length) {
+    const last = mapMarkers.value[mapMarkers.value.length - 1]
+    return [last.lat, last.lng]
+  }
+  return [39.5, -95.0]
+})
+
 </script>
 
 <template>
@@ -216,8 +284,8 @@ const statusColumns: ColumnDef<StatusData>[] = [
             <CardHeader>
               <CardTitle>Order Locations</CardTitle>
             </CardHeader>
-            <CardContent class="h-[400px]">
-              <ProductEventMap />
+            <CardContent class="h-[500px]">
+              <ProductEventMap :event-groups="[]" :events-no-path="mapMarkers" :center="mapCenter" :zoom="12" />
             </CardContent>
           </Card>
         </TabsContent>

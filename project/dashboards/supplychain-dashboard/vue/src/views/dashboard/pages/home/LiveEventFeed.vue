@@ -3,6 +3,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import http from '@/utils/http'
 import { Badge } from '@/components/ui/badge'
 
+
 interface LiveEvent {
   message_id: string
   event_type: string
@@ -31,23 +32,26 @@ async function fetchEvents() {
   error.value = null
   try {
     const [pe, te] = await Promise.all([
-      http.get<{ results: any[] }>(`/api/product-events/?page_size=20`),
-      http.get<{ results: any[] }>(`/api/tracker-events/?page_size=20`),
+      http.get<any[]>(`/api/productevents/?page_size=20`),
+      http.get<any[]>(`/api/trackerevents/?page_size=20`),
     ])
-    const prodEvents: LiveEvent[] = pe.data.results.map(e => ({
+
+    const prodEvents: LiveEvent[] = pe.data.map(e => ({
       message_id: e.message_id,
       event_type: e.event_type,
       timestamp: e.timestamp,
       source: 'product',
       ref_id: e.product,
     }))
-    const trkEvents: LiveEvent[] = te.data.results.map(e => ({
+
+    const trkEvents: LiveEvent[] = te.data.map(e => ({
       message_id: e.message_id,
       event_type: e.event_type,
       timestamp: e.timestamp,
       source: 'tracker',
       ref_id: null,
     }))
+
     // merge and sort descending
     events.value = [...prodEvents, ...trkEvents]
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())

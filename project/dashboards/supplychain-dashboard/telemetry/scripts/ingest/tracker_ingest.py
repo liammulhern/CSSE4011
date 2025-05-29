@@ -23,13 +23,13 @@ def tracker_raw_data_ingest_from_gatewayevent(gatewayeventraw: GatewayEventRaw) 
         TrackerEvent: The created TrackerEvent instance.
     """
     if gatewayeventraw.message_type == GatewayEventRaw.MESSAGE_TYPE_BATCH_TELEMETRY:
-        return tracker_raw_data_ingest_batch(gatewayeventraw.gateway, gatewayeventraw.payload)
+            return tracker_raw_data_ingest_batch(gatewayeventraw, gatewayeventraw.pay)
     elif gatewayeventraw.message_type == GatewayEventRaw.MESSAGE_TYPE_TELEMETRY:
-        return [tracker_raw_data_ingest(gatewayeventraw.gateway, gatewayeventraw.payload)]
+        return [tracker_raw_data_ingest(gatewayeventraw, gatewayeventraw.payload)]
 
     return []
 
-def tracker_raw_data_ingest_batch(gateway: Gateway, payload: BatchTelemetryPayload) -> List[TrackerEvent]:
+def tracker_raw_data_ingest_batch(gatewayeventraw: GatewayEventRaw, payload: BatchTelemetryPayload) -> List[TrackerEvent]:
     """
     Ingests batch telemetry data into the TrackerEvent model.
 
@@ -43,7 +43,7 @@ def tracker_raw_data_ingest_batch(gateway: Gateway, payload: BatchTelemetryPaylo
 
     for reading in payload['readings']:
         try:
-            trackerevent = tracker_raw_data_ingest(gateway, reading)
+            trackerevent = tracker_raw_data_ingest(gatewayeventraw, reading)
         except ValueError as e:
             logger.error(f"Failed to ingest reading {reading}: {e}")
             continue
@@ -52,7 +52,7 @@ def tracker_raw_data_ingest_batch(gateway: Gateway, payload: BatchTelemetryPaylo
 
     return trackerevents
 
-def tracker_raw_data_ingest(gateway: Gateway, payload: TelemetryPayload) -> TrackerEvent:
+def tracker_raw_data_ingest(gatewayeventraw: GatewayEventRaw, payload: TelemetryPayload) -> TrackerEvent:
     """
     Ingests telemetry data into the TrackerEvent model.
 
@@ -79,19 +79,20 @@ def tracker_raw_data_ingest(gateway: Gateway, payload: TelemetryPayload) -> Trac
     except ValueError:
         raise ValueError("Invalid timestamp format. Must be an ISO 8601 string.")
 
+    hash = gatewayeventraw.signature['hash']
 
     # 5. Create TrackerEvent instance
     tracker_event = TrackerEvent.objects.create(
-        message_id=gateway.,
+        message_id=gatewayeventraw.message_id,
         tracker=tracker,
-        gateway=gateway,
+        gateway=gatewayeventraw.gateway,
         event_type=TrackerEvent.EVENT_TYPE_TELEMETRY,
         payload=payload,
         timestamp=timestamp,
-        data_hash=payload['hash'],
+        data_hash=hash,
     )
 
-    if HexStr(payload['hash']) != tracker_event.compute_hash():
+    if HexStr(hash) != tracker_event.compute_hash():
         TrackerNotification.objects.create(
             tracker=tracker,
             message=f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {payload['hash']}.",

@@ -9,8 +9,6 @@ export interface ProductEvent {
   event_type: string
   payload: Record<string, any>
   timestamp: string
-  data_hash: string
-  data_uri: string
   recorded_by: number | null
   created_timestamp: string
 }
@@ -70,10 +68,27 @@ export const useProductEventStore = defineStore('productEvent', {
       this.error = null
 
       try {
-        const resp = await http.get<{ results: ProductEvent[] }>(
+        const resp = await http.get<ProductEvent[]>(
           `/api/productevents/?product=${productId}&ordering=-timestamp&page_size=1000`
         )
-        this.events = resp.data.results
+        this.events = resp.data
+      } catch (err: any) {
+        this.error = err.message || String(err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    /** Load product events for a specific productorder */
+    async fetchEventsByProductOrder(productorderId: string | number) {
+      this.loading = true
+      this.error = null
+
+      try {
+        const resp = await http.get<ProductEvent[]>(
+          `/api/productevents/?productorder=${productorderId}&ordering=-timestamp&page_size=1000`
+        )
+        this.events = resp.data
       } catch (err: any) {
         this.error = err.message || String(err)
       } finally {

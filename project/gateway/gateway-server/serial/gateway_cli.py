@@ -9,5 +9,3 @@ def set_device(serial_client: SerialClient, value: int):
     """
     cmd = f"set_device {value}"
     serial_client.write(cmd)
-
-

@@ -47,8 +47,6 @@ class ProductEventSerializer(serializers.ModelSerializer):
             'event_type',
             'payload',
             'timestamp',
-            'data_hash',
-            'data_uri',
             'recorded_by',
             'created_timestamp',
         ]

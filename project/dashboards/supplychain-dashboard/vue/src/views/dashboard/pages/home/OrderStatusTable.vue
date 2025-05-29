@@ -105,7 +105,7 @@ const columns: ColumnDef<OrderData>[] = [
     header: () => ' ',
     cell: ({ row }) => h(Button, {
       variant: 'ghost',
-      onClick: () => router.push({ name: 'product_order_id', params: { id: String(row.original.id) } })
+      onClick: () => router.push({ name: 'product_order_index', params: { id: String(row.original.id) } })
     }, () => 'View')
   }
 ]

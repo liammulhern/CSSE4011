@@ -25,9 +25,20 @@ class ProductViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(recorded_by=self.request.user)
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+
+        return qs.filter(
+            owner_id__in=user.user_companies.filter(
+                is_active=True
+            ).values_list('company_id', flat=True)
+        )
+
     def get_serializer_class(self):
         if self.action == "events":
             return ProductEventSerializer
+
         return ProductSerializer
 
     @action(detail=True, methods=['get'], url_path='qr-code')

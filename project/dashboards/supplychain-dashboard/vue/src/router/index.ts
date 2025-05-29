@@ -157,7 +157,6 @@ router.beforeEach(async (to, from, next) => {
   if (to.name === 'login' && isAuthenticated())
     return next({ name: 'home' });
 
-  // TODO: check if the token is valid
   if (to.query.token && hasQRAuth)
     return next();
 

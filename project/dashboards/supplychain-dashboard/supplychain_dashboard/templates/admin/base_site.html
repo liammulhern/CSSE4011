@@ -1,0 +1,13 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link
+    rel="stylesheet"
+    href="{% static 'css/admin.css' %}"
+    integrity=""   {# optional SRI #}
+    crossorigin="anonymous"
+  >
+{% endblock %}
+

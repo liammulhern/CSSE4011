@@ -24,12 +24,6 @@ export const APP_MENU: Record<string, { name: string, routes: IDashboardMenus[] 
         description: 'Manage Manufactured Products'
       },
       {
-        title: 'Product Types',
-        icon: 'Layers',
-        path: 'product_types',
-        description: 'Manage Product Catalog'
-      },
-      {
         title: 'Product Orders',
         icon: 'ClipboardCheck',
         path: 'product_orders',

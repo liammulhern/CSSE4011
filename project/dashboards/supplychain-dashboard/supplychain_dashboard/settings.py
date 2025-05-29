@@ -61,7 +61,9 @@ ROOT_URLCONF = 'supplychain_dashboard.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            BASE_DIR / 'supplychain_dashboard' / 'templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -118,9 +120,16 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+STATICFILES_DIRS = [
+  BASE_DIR / "supplychain_dashboard" / "static",
+]
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 IOTA_NODE_URL = 'https://api.testnet.iotaledger.net'
+
+AZURE_IOTHUB_CONNECTION_STRING = os.getenv("AZURE_IOTHUB_CONNECTION_STRING")
+

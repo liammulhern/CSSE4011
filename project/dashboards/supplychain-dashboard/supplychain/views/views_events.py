@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, permission_classes
 from rest_framework.response import Response
+from django.db.models import Q
 
 from supplychain.models import TrackerEvent, ProductEvent
 from supplychain.serialisers.serialiser_events import (
@@ -39,10 +40,20 @@ class ProductEventViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(recorded_by=self.request.user)
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+
+        return qs.filter(
+            product__owner_id__in=user.user_companies.filter(
+                is_active=True
+            ).values_list('company_id', flat=True)
+        )
+
     @action(detail=True, methods=['post'], url_path='verify')
     def verify(self, request, pk=None):
         """
-        POST /product-events/{pk}/verify/
+        POST /productevents/{pk}/verify/
         Calls ProductEvent.verify_block_hash() and returns pass/fail.
         """
         product_event = self.get_object()
@@ -58,11 +69,40 @@ class ProductEventViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path=r'product/(?P<product_id>[^/.]+)')
     def by_product(self, request, product_id=None):
         """
-        GET /api/product-events/by-product/{product_id}/
+        GET /api/productevents/product/{product_id}/
         list all ProductEvent instances for the given product.
         """
         # Filter events by product foreign key
-        qs = self.get_queryset().filter(product=product_id).order_by('-timestamp')
+        qs = self.get_queryset().filter(product_id=product_id).order_by('-timestamp')
+
+        # Apply pagination if requested
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path=r'productorder/(?P<productorder_id>[^/.]+)')
+    def by_productorder(self, request, productorder_id=None):
+        """
+        GET /api/productevents/productorder/{productorder_id}/
+        list all ProductEvent instances for the given productorder.
+        """
+        companies = self.request.user.user_companies.filter(
+            is_active=True
+        ).values_list('company_id', flat=True)
+
+        # Filter events by product foreign key
+        qs = ProductEvent.objects.filter(
+            # events whose product is in this order
+            product__product_orders__id=productorder_id
+        ).filter(
+            # and that order must involve one of your companies
+            Q(product__product_orders__supplier_id__in=companies) |
+            Q(product__product_orders__receiver_id__in=companies)
+        ).distinct()
 
         # Apply pagination if requested
         page = self.paginate_queryset(qs)
