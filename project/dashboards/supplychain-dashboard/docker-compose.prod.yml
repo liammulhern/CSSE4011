@@ -1,11 +1,21 @@
 services:
   reverse-proxy:
     image: traefik:v3.4
-    command: --api.insecure=true --providers.docker
+    command: 
+      - "--providers.docker"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entryPoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=liam@pathledger.live"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
     ports:
+      - "443:443"
       - "80:80"
-      - "8080:8080"
     volumes:
+      - letsencrypt:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock
   pathledger-backend:
     build:
@@ -13,7 +23,10 @@ services:
       target: prod
       dockerfile: Dockerfile.django
     labels:
+      - "traefik.enable=true"
       - "traefik.http.routers.pathledger.rule=Host(`pathledger.live/api`)"
+      - "traefik.http.routers.pathledger.entrypoints=websecure"
+      - "traefik.http.routers.pathledger.tls.certresolver=myresolver"
     ports:
       - "3000:8000"
     env_file:
@@ -31,3 +44,6 @@ services:
       - pathledger-backend
     env_file:
       - .prod.env
+volumes:
+  letsencrypt:
+
