@@ -50,8 +50,10 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
         flash_read(flash_dev, offset, &sensors, sizeof(sensors));
         offset += sizeof(sensors);
         flash_vars.read_size++;
-        LOG_INF("Temp: %u, Hum: %u, Press: %u, Gas: %u, x: %d, y: %d, z %d", sensors.temp, sensors.hum, sensors.press, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
-        LOG_INF("Read: time: %u   uptime: %d   lat: %f   lon: %f   alt: %f", sensors.time, sensors.uptime, (double)sensors.lat, (double)sensors.lon, (double)sensors.alt);
+        LOG_INF("Read: temp: %u   press: %u    hum: %u    gas: %u    x_accel: %d    y_accel: %d    z_accel: %d", 
+        sensors.temp, sensors.press, sensors.hum, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
+        LOG_INF("Read: time: %u   uptime: %d    lat: %f   lon: %f   alt: %f", 
+        sensors.time, sensors.uptime, (double)sensors.lat, (double)sensors.lon, (double)sensors.alt);
         pack_sensor_data(&sensors);
     }
     write_consts(flash_dev, write_block_size, flash_vars.size, flash_vars.read_size, flash_vars.head, flash_vars.tail, flash_vars.wrap_around);
@@ -73,7 +75,6 @@ sensor_goto:
     if (err) {
         sensor_retry++;
         if (sensor_retry > 5) {
-            k_msleep(SAMPLE_RATE);
             LOG_WRN("Too many incorrect attempts at reading sensors.\n");
             sensors.temp = 0;
             sensors.hum = 0;
@@ -88,7 +89,7 @@ sensor_goto:
     }
     err = init_gnss();
 gnss_goto:
-    k_msleep(1500);
+    k_msleep(1000);
     err |= read_gnss(&(sensors.time), &(sensors.lat), &(sensors.ns), &(sensors.lon), &(sensors.ew), &(sensors.alt), &sat);
     if (err) {
         gnss_retry++;
@@ -105,7 +106,10 @@ gnss_goto:
     }
     
     flash_write_sensor(flash_dev, write_block_size, sensors);
-    LOG_INF("Write: time: %u   lat: %f   lon: %f   alt: %f", sensors.time, (double)sensors.lat, (double)sensors.lon, (double)sensors.alt);
+    LOG_INF("Write: temp: %u   press: %u    hum: %u    gas: %u    x_accel: %d    y_accel: %d    z_accel: %d", 
+        sensors.temp, sensors.press, sensors.hum, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
+    LOG_INF("Write: time: %u   uptime: %d    lat: %f   lon: %f   alt: %f", 
+        sensors.time, sensors.uptime, (double)sensors.lat, (double)sensors.lon, (double)sensors.alt);
 }
 
 int init_all() {
@@ -156,13 +160,12 @@ int main(void) {
 		LOG_WRN("%s: device not ready.\n", cons->name);
 		return EINVAL;
 	}
-    k_msleep(2000);
     int err = init_all();
     if (err) {
         LOG_WRN("Error in init, shutting down");
     }
     write_init_consts(flash_dev, write_block_size);
-    k_msleep(2000);
+   k_msleep(500);
     while(1) {  
         // Loop occurs on every wakeup from idle or after every occurance
         if (get_rtc_tick()) {
@@ -189,12 +192,12 @@ int main(void) {
             //read_loop(flash_dev, write_block_size);
             
 
-        } else if (get_accel_tick()) {
+        } else if (accel_tick) {
             // Woke from accel
             LOG_WRN("Rapid motion detected!");
             green_led();
             write_loop(flash_dev, write_block_size);
-            set_accel_tick(0);
+            accel_tick = 0 ;
             black_led();
         } 
         if (get_ble_tick()) {
@@ -213,7 +216,7 @@ int main(void) {
         }
         LOG_INF("Napping... zzz...\n");
         white_led_flash();
-        while (!get_rtc_tick() && !get_accel_tick() && !get_ble_tick()) {
+        while (!get_rtc_tick() && !accel_tick && !get_ble_tick()) {
             k_cpu_idle(); // truly idle CPU while waiting
         }
     }

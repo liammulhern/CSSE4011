@@ -10,13 +10,13 @@ const struct device *accel;
 
 uint8_t accel_tick = 0;
 
-uint8_t get_accel_tick(void) {
-    return accel_tick;
-}
+// uint8_t get_accel_tick(void) {
+//     return accel_tick;
+// }
 
-void set_accel_tick(int set) {
-    accel_tick = set;
-}
+// void set_accel_tick(int set) {
+//     accel_tick = set;
+// }
 
 static void accel_handler(const struct device *dev, const struct sensor_trigger *trig)
 {

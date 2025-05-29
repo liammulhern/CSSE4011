@@ -31,10 +31,11 @@ extern const struct device *humidity;
 extern const struct device *evoc;
 extern const struct device *accel;
 
+extern uint8_t accel_tick;
 
-uint8_t get_accel_tick(void);
+// uint8_t get_accel_tick(void);
 
-void set_accel_tick(int set);
+// void set_accel_tick(int set);
 
 void bind_sensors(void);
 

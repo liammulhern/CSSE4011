@@ -49,9 +49,9 @@ void white_led(void) {
 void white_led_flash(void) {
     for (int i = 0; i < 3; i++) {
         black_led();
-        k_msleep(1000);
+        k_msleep(500);
         white_led();
     }
-    k_msleep(1000);
+    k_msleep(500);
     black_led();
 }
