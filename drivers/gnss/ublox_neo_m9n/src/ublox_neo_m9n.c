@@ -621,11 +621,11 @@ static int neom9n_cfg_nav5(const struct device *dev, enum gnss_mode g_mode, enum
 
     rc = neom9n_send_ubx(dev, UBX_CLASS_CFG, UBX_CFG_NAV5, payload, 36);
     if (rc == NACK) {
-        LOG_ERR("Config NAV5 not acknowledged %s", dev->name);
+        //LOG_ERR("Config NAV5 not acknowledged %s", dev->name);
     } else if (rc == ACK) {
-        LOG_INF("Config NAV5 acknowledged %s", dev->name);
+        //LOG_INF("Config NAV5 acknowledged %s", dev->name);
     } else if (rc) {
-        LOG_ERR("Error %d config NAV5 for %s", rc, dev->name);
+        //LOG_ERR("Error %d config NAV5 for %s", rc, dev->name);
     }
 
     return rc;
@@ -665,11 +665,11 @@ static int neom9n_cfg_gnss(const struct device *dev, uint8_t msg_ver, uint8_t nu
     rc = neom9n_send_ubx(dev, UBX_CLASS_CFG, UBX_CFG_GNSS, payload,
                 (4 + (8 * num_config_blocks)));
     if (rc == NACK) {
-        LOG_ERR("Config GNSS not acknowledged %s", dev->name);
+        //LOG_ERR("Config GNSS not acknowledged %s", dev->name);
     } else if (rc == ACK) {
-        LOG_INF("Config GNSS acknowledged %s", dev->name);
+        //LOG_INF("Config GNSS acknowledged %s", dev->name);
     } else if (rc) {
-        LOG_ERR("Error %d config GNSS for %s", rc, dev->name);
+        //LOG_ERR("Error %d config GNSS for %s", rc, dev->name);
     }
 
     return rc;
@@ -686,11 +686,11 @@ static int neom9n_cfg_msg(const struct device *dev, uint8_t msg_id, uint8_t rate
 
     rc = neom9n_send_ubx(dev, UBX_CLASS_CFG, UBX_CFG_MSG, payload, 3);
     if (rc == NACK) {
-        LOG_ERR("Config MSG not acknowledged %s", dev->name);
+        //LOG_ERR("Config MSG not acknowledged %s", dev->name);
     } else if (rc == ACK) {
-        LOG_INF("Config MSG acknowledged %s", dev->name);
+        //LOG_INF("Config MSG acknowledged %s", dev->name);
     } else if (rc) {
-        LOG_ERR("Error %d config MSG for %s", rc, dev->name);
+        //LOG_ERR("Error %d config MSG for %s", rc, dev->name);
     }
 
     return rc;
