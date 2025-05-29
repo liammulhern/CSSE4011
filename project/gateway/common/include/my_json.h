@@ -184,7 +184,7 @@ static const char JSON_FORMAT[] =
         "\"keyId\":\"%s\","
         "\"value\":\"%s\""
     "}"
-    "}";
+"}";
 
 // void print_json_full_packet(const struct json_full_packet *packet)
 extern void print_json_full_packet(const struct json_full_packet *packet);

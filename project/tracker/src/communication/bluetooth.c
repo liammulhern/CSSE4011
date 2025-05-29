@@ -177,7 +177,6 @@ void hash_sensor_blk(const struct sensor_blk *data, uint8_t *hash_buffer) {
     }
 }
 
-
 static void fill_json_packet_from_tracker_payload(const struct sensor_blk *data, char* json_output) {
 
     time_t raw_time = (time_t)data->time;
@@ -213,7 +212,7 @@ static void fill_json_packet_from_tracker_payload(const struct sensor_blk *data,
         data->z_accel
     );
 
-    if (ret > 0 && ret < sizeof(json_output)) {
+    if (ret > 0 && ret < JSON_BUFFER_SIZE) {
         printk("%s\n", json_output);
     } else {
         printk("JSON encoding failed or buffer too small.\n");
