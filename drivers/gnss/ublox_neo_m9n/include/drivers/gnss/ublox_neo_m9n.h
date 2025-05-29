@@ -15,6 +15,7 @@
 
 #include <drivers/gnss/ublox_neo_m9n_defines.h>
 
+extern int fix_uptime;
 enum gnss_mode {
     Portable = 0,
     Stationary = 2,
@@ -82,6 +83,14 @@ struct neom9n_data {
         uint8_t sec;
     } time;
 
+    struct {
+        uint16_t year;
+        uint8_t  month, day;
+    } date;
+
+    int8_t   tz_offset_hours;
+    uint8_t  tz_offset_minutes;
+
     float longitude_min;
     float latitude_min;
     float longitude_deg;
@@ -93,6 +102,7 @@ struct neom9n_data {
     char ind_latitude;
 
     uint8_t satellites;
+    uint32_t timestamp;
 };
 
 typedef int (*neom9n_api_fetch_data)(const struct device *dev);
@@ -115,6 +125,7 @@ typedef void (*neom9n_api_get_longitude)(const struct device *dev, float *longit
 typedef void (*neom9n_api_get_ew)(const struct device *dev, char *ew);
 typedef void (*neom9n_api_get_altitude)(const struct device *dev, float *altitude);
 typedef void (*neom9n_api_get_satellites)(const struct device *dev, int *satellites);
+typedef void (*neom9n_api_get_timestamp)(const struct device *dev, uint32_t *timestamp);
 
 __subsystem struct neom9n_api {
     neom9n_api_fetch_data fetch_data;
@@ -124,6 +135,7 @@ __subsystem struct neom9n_api {
     neom9n_api_cfg_msg cfg_msg;
 
     neom9n_api_get_time get_time;
+    neom9n_api_get_timestamp get_timestamp;
     neom9n_api_get_latitude get_latitude;
     neom9n_api_get_ns get_ns;
     neom9n_api_get_longitude get_longitude;

@@ -10,15 +10,15 @@
 
 # Team Members
 
-* Alexander Strang ()
+* Alexander Strang (47423510)
 * Liam Mulhern (47428748)
-* Ryan Smith ()
+* Ryan Smith (47444131)
 
 ---
 
 ## Project and Scenario Description
 
-An end-to-end IoT + blockchain solution that creates a tamper-proof “Digital Product Passport” (DPP) for physical goods. Each manufactured product carries a unique QR code that encodes a link to the user dashboard with JWT for authentication and hash to its blockchain model. Embedded sensor nodes (e.g. thingy52) record environmental data (temperature, humidity, location, custody transfers, impact) throughout the supply chain, hashing and anchoring snapshots on the IOTA blockchain. Clients placing a product order specify the requirements that the products must be subject to while in distribution. They are then alerted if the product exceeds these specifications. Sensor nodes also offer an NFC interface that can be scanned and link to the user dashboard identifying alerts. Stakeholders—from suppliers to consumers—scan the QR code to instantly verify provenance, integrity, and handling history, improving trust, compliance, and recall responsiveness.
+An end-to-end IoT and blockchain solution that creates a tamper-proof “Digital Product Passport” (DPP) for physical goods. Each manufactured product carries a unique QR code that links to an encoded user dashboard with a JSON Web Token (JWT) for authentication and hash to its blockchain model. Embedded sensor nodes attached to the mobile device (e.g. thingy52) record environmental data (temperature, humidity, location, pressure, custody transfers, Evoc Gas levels) throughout the supply chain, anchoring the hashed data to the IOTA blockchain. Clients placing a product order, specify the requirements that the products must be subject to while in distribution, and the levels are then monitored by the tracker. They are then alerted if the product exceeds these specifications. Mobile nodes also offer a Near Field Communication (NFC) interface that can be scanned and linked to the user dashboard, highlighting alerts. Allowing stakeholders to scan the QR code to instantly verify provenance, integrity and handling history, improving trust, compliance, and recall responsiveness.
 
 ---
 
@@ -26,12 +26,12 @@ An end-to-end IoT + blockchain solution that creates a tamper-proof “Digital P
 
 | Deliverable                                                                            | KPI / Success Metric                                                  |
 | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| **1. IoT Sensor Prototype**<br>MCU firmware for environmental sensing and tagging.     | ≥ 99 % packet delivery rate over LoRaWAN/NB-IoT in tests.             |
-| **2. Blockchain Smart Contract**<br>Permissioned chain contract to store event hashes. | Record ≥ 1 000 on-chain events without error.                         |
-| **3. Off-chain Data Store Integration**<br>Raw sensor logs in Azure Cosmos DB or IPFS. | Average write latency < 200 ms; ≥ 99.9 % data durability.             |
-| **4. Web/Mobile Dashboard**<br>DPP lookup, analytics, alerting UI.                     | Page load ≤ 300 ms; user task success rate ≥ 95 % in usability tests. |
+| **1. IoT Sensor Prototype**<br>MCU firmware for environmental sensing and tagging.     | ≥ 99 % packet delivery rate over bluetooth in tests.                  |
+| **2. Blockchain Smart Contract**<br>Permissioned chain contract to store event hashes. | Record all on-chain events without error.                             |
+| **3. Off-chain Data Store Integration**<br>Raw sensor logs in Azure Postgres SQL DB    | Average write latency < 200 ms; ≥ 99.9 % data durability.             |
+| **4. Web/Mobile Dashboard**<br>DPP lookup, analytics, alerting UI.                     | Displays relevant data for users based on relevant permission         |
 | **5. ABAC Permission Engine**<br>Attribute-based access control for all stakeholders.  | 100 % enforcement of role policies in penetration tests.              |
-| **6. End-to-End Traceability Demo**<br>Consumer-facing app scan → full history.        | Time to display full provenance ≤ 5 s; zero incorrect records.        |
+| **6. End-to-End Traceability Demo**<br>Consumers can view a package's full history.    | Time to display full provenance ≤ 5 s; zero incorrect records.        |
 
 ---
 
@@ -41,14 +41,15 @@ An end-to-end IoT + blockchain solution that creates a tamper-proof “Digital P
 
 ```mermaid
 flowchart LR
-    A["Manufactured Product<br/>(QR/NFC Tag)"] -->|Scanning| B["Embedded Sensor Node<br/>(MCU+Temp/Humidity/GPS)"]
-    B -->|LoRaWAN/NB-IoT| C["Edge Gateway<br/>(Raspberry Pi)"]
+    A["Manufactured Product<br/>w/ QR"] -->|Assigned| B["Tracker Sensor Node<br/>(Thingy52 w/ Temp/Humidity/GPS/etc)"]
+    B -->|Bluetooth LE| C["Edge Gateway<br/>(NRF/ESP32)"]
     C -->|MQTT → Azure IoT Hub| D[Azure IoT Hub]
-    D -->|Event Processing| E[Azure Function → Cosmos DB]
-    D -->|Blockchain API| F[Blockchain Network]
-    F --> G[Smart Contract Ledger]
+    D -->|Event Processing| E[Azure Function -> Azure Postgres DB]
+    D -->|IOTA Blockchain API| F[IOTA Blockchain Tangle]
+    F --> G[IOTA Transaction Ledger]
     E --> H[Web/Mobile Dashboard]
     G --> H
+    A -->|QR Code Scanner| H
 ```
 
 ### Software Implementation Flow
@@ -56,10 +57,10 @@ flowchart LR
 ```mermaid
 flowchart TD
     subgraph "Mote (Sensor Node)"
-      M1[Boot, Read Tag UID]
-      M2["Sample Sensors<br/>(temp, humidity, GPS)"]
+      M1[Boot]
+      M2["Sample Sensors<br/>(temp, humidity, GPS, etc)"]
       M3["Hash Payload<br/>(SHA-256)"]
-      M4[Transmit via LoRa/MQTT]
+      M4[Transmit via BLE]
       M1 --> M2 --> M3 --> M4
     end
 
@@ -91,14 +92,13 @@ flowchart TD
 
 ## Sensor Integration
 
-> TODO: Change this as it is auto generated
-
 | Sensor Type | Data Collected        | Integration Method      |
 | ----------- | --------------------- | ----------------------- |
-| SHT31       | Temperature, Humidity | I2C, polled every 5s    |
-| MPU6050     | Shock, Angle, Motion  | I2C, triggered on event |
-| NEO-6M      | Geolocation (GPS)     | UART, polled every 10s  |
-
+| ST_LPS22HB  | Temperature, Pressure | I2C, when polled        |
+| ST_HTS221   | Humidity              | I2C, when polled        |
+| NEOM9N      | Geolocation (GPS)     | I2C, When polled        |
+| ACS_CCS811  | Air Quality           | I2C, When polled        |
+| LIS2DH12    | Accelerometer         | I2c, When polled        |
 * Data packets are encoded in compact JSON and signed with a pre-shared cryptographic key.
 * I2C buses use Zephyr RTOS drivers for sensor interfacing.
 
@@ -109,36 +109,30 @@ flowchart TD
 ### Network Topology
 
 * Star topology with central Edge Gateway node
-* MQTT or HTTPS REST uplink to server
+* MQTT uplink to server
 
 ### Message Protocol Diagram
 
 ```mermaid
 sequenceDiagram
-    participant SensorNode
+    participant TrackerNode
     participant Gateway
     participant Server
 
-    SensorNode->>"Gateway: POST /data (JSON + Signature)"
+    TrackerNode->>Gateway: "POST /data (JSON + Signature)"
     Gateway->>Server: Forward packet
     Server->>Blockchain: Store hash of packet
     Server-->>Dashboard: Update data view
 ```
 
-### Data Rate
-
-* Average message size: 200 bytes
-* Frequency: 1 message/10 seconds
-* Uplink bandwidth: \~20 bytes/sec/node
-
 ---
 
 ## Algorithm Schemes (Blockchain)
 
-* **Blockchain Layer**: Hyperledger Fabric / IOTA MAM
+* **Blockchain Layer**: IOTA MAM
 * **Hashing**: SHA-256 hash of payloads
 * **Verification**: Packet signatures checked using ECDSA
-* **Storage**: Off-chain data in IPFS, on-chain metadata on Hyperledger
+* **Storage**: Off-chain data in Azure Postgres DB, on-chain metadata in IOTA Tangle
 
 ---
 
@@ -161,57 +155,70 @@ A refrigerated medical shipment must maintain <8°C. A temperature spike is dete
 
 ### Task Allocation (by Role)
 
-| ID  | Task                   | Description                                                       | Assigned To | Difficulty |
-| --- | ---------------------- | ----------------------------------------------------------------- | ----------- | ---------- |
-| T1  | Requirement Analysis   | Define objectives, constraints, stakeholders                      | All         | Medium     |
-| T2  | Hardware Selection     | Select Thingy52, sensors, and comm modules                        | Liam        | Medium     |
-| T3  | Sensor Firmware        | Zephyr RTOS firmware: sensor polling, JSON encoding, cryptography | Liam        | High       |
-| T4  | Edge Gateway           | MQTT gateway and buffer relay                                     | Liam        | Medium     |
-| T5  | Secure Transmission    | MQTT over TLS, ECDSA signing                                      | Liam        | High       |
-| T6  | Blockchain Integration | Smart contract deployment, hash storage using IOTA/Fabric         | Ryan        | Very High  |
-| T7  | Off-chain Storage      | Azure CosmosDB/IPFS for raw data, indexing                        | Ryan        | High       |
-| T8  | REST API Backend       | Flask or Django backend to serve dashboard and ingest sensor data | Ryan        | High       |
-| T9  | Dashboard Frontend     | React or Vue UI with traceability view, product search            | Alex        | Medium     |
-| T10 | ABAC Auth Engine       | Implement JWT and role-based access to dashboard/API              | Alex        | Medium     |
-| T11 | Alerting System        | Evaluate telemetry against order specs + notification logic       | Alex        | Medium     |
-| T12 | QR/NFC Tag Encoding    | Generate product QR codes, NFC tag handling                       | Liam        | Medium     |
-| T13 | Client Order Interface | UI for clients to submit order constraints                        | Alex        | Medium     |
-| T14 | Integration Testing    | Validate end-to-end telemetry flow                                | All         | High       |
-| T15 | Security Review        | Simulate tampering and penetration testing                        | Ryan        | High       |
-| T16 | Demo and Documentation | Create setup guide, diagrams, final system walkthrough            | All         | Medium     |
+| ID   | Task                     | Description                                                                 | Assigned To | Difficulty  |
+|------|--------------------------|-----------------------------------------------------------------------------|-------------|-------------|
+| T1   | Requirement Analysis     | Define objectives, constraints, stakeholders                                | All         | Medium      |
+| T2   | Hardware Selection       | Select Thingy52, sensors, and comm modules                                  | Alex        | Medium      |
+| T3   | Sensor Firmware          | Zephyr RTOS firmware: sensor polling, JSON encoding, cryptography           | All         | High        |
+| T4   | Edge Gateway             | MQTT gateway and buffer relay on Azure                                      | Liam        | Medium      |
+| T5   | Secure Transmission      | MQTT over TLS, ECDSA signing                                                | Liam        | High        |
+| T6   | Blockchain Integration   | Smart contract deployment, hash storage using IOTA                          | Liam        | Very High   |
+| T7   | Off-chain Storage        | Azure Postgres DB for raw data, indexing                                    | Liam        | High        |
+| T8   | REST API Backend         | Flask or Django backend to serve dashboard and ingest sensor data           | Liam        | High        |
+| T9   | Dashboard Frontend       | React or Vue UI with traceability view, product search                      | Liam        | Medium      |
+| T10  | ABAC Auth Engine         | Implement JWT and role-based access to dashboard/API                        | Liam        | Medium      |
+| T11  | Alerting System          | Evaluate telemetry against order specs + notification logic                 | All         | Medium      |
+| T12  | QR/NFC Tag Encoding      | Generate product QR codes, NFC tag handling                                 | All         | Medium      |
+| T13  | Client Order Interface   | UI for clients to submit order constraints                                  | Liam        | Medium      |
+| T14  | Integration Testing      | Validate end-to-end telemetry flow                                          | All         | High        |
+| T15  | Security Review          | Simulate tampering and penetration testing                                  | All         | High        |
+| T16  | Demo and Documentation   | Create setup guide, diagrams, final system walkthrough                      | All         | Medium      |
+| T17  | Tracker CLI Commands     | Add CLI to tracker node for manufacturer settings                           | Alex        | Medium      |
+| T18  | Gateway CLI Commands     | Add CLI to gateway base for manufacturer settings                           | Ryan        | Medium      |
+| T19  | Tracker Non-volatile Data| Implement non-volatile data storage to mobile tracker for persistent memory | Alex        | Hard        |
+| T20  | Gateway BLE              | Bluetooth low energy GATT interface on gateway                              | Ryan        | Very Hard   |
+| T21  | Tracker BLE              | Bluetooth low energy GATT interface on tracker                              | Ryan        | Very Hard   |
+| T22  | Gateway Network          | Transmit tracker data from gateway to IoT Hub                               | Alex        | Hard        |
+| T23  | Low Power Operation      | Apply power management for tracker                                          | Alex        | Hard        |
 
 ### Gantt Chart
 
 ```mermaid
 gantt
-    title PathLedger Project Timeline (May 13 – May 30)
+    title IoT Blockchain Supply Chain Project (May 13–30)
     dateFormat  YYYY-MM-DD
-    excludes weekends
+    axisFormat  %b %d
 
-    section Planning
-    Requirement Analysis        :a1, 2025-05-13, 2d
+    section All
+    Requirement Analysis           :T1, 2025-05-13, 2d
+    QR/NFC Tag Encoding            :T12, after T1, 2d
+    Sensor Firmware                :T3, after T2, 3d
+    Alerting System                :T11, after T8, 2d
+    Integration Testing            :T14, after T9, 2d
+    Security Review                :T15, after T14, 1d
+    Demo & Documentation           :T16, after T15, 1d
 
-    section Embedded Systems (Liam)
-    Hardware Selection          :a2, after a1, 1d
-    Sensor Firmware             :a3, after a2, 4d
-    Edge Gateway                :a4, after a3, 2d
-    Secure Transmission         :a5, after a4, 3d
-    QR/NFC Tag Encoding         :a6, after a5, 1d
+    section Alex
+    Hardware Selection             :T2, after T1, 2d
+    Tracker CLI commands           :T17, after T3, 2d
+    Tracker Non-volatile Data      :T19, after T3, 4d
+    Low power operation            :T23, after T3, 4d
+    Gateway Network                :T22, after T5, 4d
 
-    section Backend (Ryan)
-    Blockchain Integration      :b1, 2025-05-13, 5d
-    Off-chain Storage           :b2, after b1, 3d
-    REST API Backend            :b3, after b2, 4d
-    Security Review             :b4, after b3, 1d
+    section Liam
+    Edge Gateway                   :T4, after T2, 2d
+    Secure Transmission            :T5, after T4, 3d
+    Blockchain Integration         :T6, after T5, 4d
+    Off-chain Storage              :T7, after T4, 3d
+    REST API Backend               :T8, after T7, 3d
+    Dashboard Frontend             :T9, after T8, 2d
+    ABAC Auth Engine               :T10, after T8, 2d
+    Client Order Interface         :T13, after T10, 2d
 
-    section Dashboard & Auth (Alex)
-    Dashboard Frontend          :c1, 2025-05-13, 3d
-    ABAC Auth Engine            :c2, after c1, 2d
-    Alerting System             :c3, after c2, 2d
-    Client Order Interface      :c4, after c3, 2d
-
-    section Final Integration
-    Demo and Documentation      :d1, after a6, 1d
+    section Ryan
+    Gateway CLI commands           :T18, after T4, 2d
+    Gateway BLE                    :T20, after T4, 6d
+    Tracker BLE                    :T21, after T3, 6d
 ```
 
 

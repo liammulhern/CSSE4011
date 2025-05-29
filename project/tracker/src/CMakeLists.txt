@@ -1,8 +1,7 @@
 target_sources(app PRIVATE main.c)
-
-target_sources(app PRIVATE cli/cli.c)
-
 target_sources(app PRIVATE communication/bluetooth.c)
-target_sources(app PRIVATE communication/nfc.c)
-
+target_sources(app PRIVATE flash/flash.c)
 target_sources(app PRIVATE sensors/gnss.c)
+target_sources(app PRIVATE sensors/sensors.c)
+target_sources(app PRIVATE gpio/led.c)
+target_sources(app PRIVATE gpio/rtc.c)

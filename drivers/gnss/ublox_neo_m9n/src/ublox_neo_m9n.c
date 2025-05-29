@@ -13,6 +13,7 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/util.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/timeutil.h>
 
 #include <ctype.h>
 #include <stdarg.h>
@@ -33,6 +34,12 @@ static void neom9n_get_time(const struct device *dev, struct time *time)
 {
     struct neom9n_data *data = dev->data;
     *time = data->time;
+}
+
+static void neom9n_get_timestamp(const struct device *dev, uint32_t *timestamp)
+{
+    struct neom9n_data *data = dev->data;
+    *timestamp = data->timestamp;
 }
 
 static void neom9n_get_latitude(const struct device *dev, float *latitude)
@@ -95,7 +102,6 @@ static int read_register(const struct device *dev, uint8_t addr, char *buffer)
     const struct neom9n_config *cfg = dev->config;
 
     int rc = i2c_write_read(cfg->i2c_dev, cfg->i2c_addr, &addr, sizeof(addr), buffer, 1);
-
     return rc;
 }
 
@@ -236,10 +242,10 @@ static enum message_id get_message_id(const char *buffer, bool strict)
 
 static float to_degrees(float deg_min)
 {
-    float degrees = (int)(deg_min / 100.0);
-    float minutes = deg_min - (100.0 * degrees);
+    float degrees = (int)(deg_min / 100.0F);
+    float minutes = deg_min - (100.0F * degrees);
 
-    return (degrees + (minutes / 60.0));
+    return (degrees + (minutes / 60.0F));
 }
 
 void neom9n_parse_gga(const struct device *dev, char *fields[20])
@@ -308,6 +314,65 @@ void neom9n_parse_gga(const struct device *dev, char *fields[20])
     }
 }
 
+void neom9n_parse_zda(const struct device *dev, char *fields[10])
+{
+    struct neom9n_data *data = dev->data;
+    char buf[16];
+    char *p;
+
+    /* 1) Parse UTC time hhmmss.ss */
+    if (fields[1][0] != '\0' && strcmp(fields[1], "-") != 0) {
+        /* copy integer part */
+        strncpy(buf, &fields[1][0], 2); buf[2] = '\0';
+        data->time.hour = atoi(buf);
+        strncpy(buf, &fields[1][2], 2); buf[2] = '\0';
+        data->time.min  = atoi(buf);
+        strncpy(buf, &fields[1][4], 2); buf[2] = '\0';
+        data->time.sec  = atoi(buf);
+    }
+
+    /* 2) Parse day */
+    if (fields[2][0] != '\0' && strcmp(fields[2], "-") != 0) {
+        data->date.day = atoi(fields[2]);
+    }
+
+    /* 3) Parse month */
+    if (fields[3][0] != '\0' && strcmp(fields[3], "-") != 0) {
+        data->date.month = atoi(fields[3]);
+    }
+
+    /* 4) Parse year */
+    if (fields[4][0] != '\0' && strcmp(fields[4], "-") != 0) {
+        data->date.year = atoi(fields[4]);
+    }
+
+    /* 5) Parse local TZ hour offset */
+    if (fields[5][0] != '\0' && strcmp(fields[5], "-") != 0) {
+        data->tz_offset_hours = atoi(fields[5]);
+    }
+
+    /* 6) Parse local TZ minute offset (strip checksum) */
+    if (fields[6][0] != '\0' && strcmp(fields[6], "-") != 0) {
+        /* fields[6] comes as e.g. "30*45" — remove “*CC” */
+        p = strchr(fields[6], '*');
+        if (p) {
+            *p = '\0';
+        }
+        data->tz_offset_minutes = atoi(fields[6]);
+    }
+
+    /* OPTIONAL: convert your struct tm + date into Unix timestamp */
+    struct tm dt = {
+        .tm_year = data->date.year  - 1900,
+        .tm_mon  = data->date.month - 1,
+        .tm_mday = data->date.day,
+        .tm_hour = data->time.hour,
+        .tm_min  = data->time.min,
+        .tm_sec  = data->time.sec,
+    };
+    data->timestamp = timeutil_timegm(&dt);
+}
+
 static int neom9n_parse_data(const struct device *dev)
 {
     struct neom9n_data *data = dev->data;
@@ -344,6 +409,7 @@ static int neom9n_parse_data(const struct device *dev)
             break;
         }
         case MESSAGE_ZDA: {
+            neom9n_parse_zda(dev, fields);
             break;
         }
         default: {
@@ -555,11 +621,11 @@ static int neom9n_cfg_nav5(const struct device *dev, enum gnss_mode g_mode, enum
 
     rc = neom9n_send_ubx(dev, UBX_CLASS_CFG, UBX_CFG_NAV5, payload, 36);
     if (rc == NACK) {
-        LOG_ERR("Config NAV5 not acknowledged %s", dev->name);
+        //LOG_ERR("Config NAV5 not acknowledged %s", dev->name);
     } else if (rc == ACK) {
-        LOG_INF("Config NAV5 acknowledged %s", dev->name);
+        //LOG_INF("Config NAV5 acknowledged %s", dev->name);
     } else if (rc) {
-        LOG_ERR("Error %d config NAV5 for %s", rc, dev->name);
+        //LOG_ERR("Error %d config NAV5 for %s", rc, dev->name);
     }
 
     return rc;
@@ -599,11 +665,11 @@ static int neom9n_cfg_gnss(const struct device *dev, uint8_t msg_ver, uint8_t nu
     rc = neom9n_send_ubx(dev, UBX_CLASS_CFG, UBX_CFG_GNSS, payload,
                 (4 + (8 * num_config_blocks)));
     if (rc == NACK) {
-        LOG_ERR("Config GNSS not acknowledged %s", dev->name);
+        //LOG_ERR("Config GNSS not acknowledged %s", dev->name);
     } else if (rc == ACK) {
-        LOG_INF("Config GNSS acknowledged %s", dev->name);
+        //LOG_INF("Config GNSS acknowledged %s", dev->name);
     } else if (rc) {
-        LOG_ERR("Error %d config GNSS for %s", rc, dev->name);
+        //LOG_ERR("Error %d config GNSS for %s", rc, dev->name);
     }
 
     return rc;
@@ -620,11 +686,11 @@ static int neom9n_cfg_msg(const struct device *dev, uint8_t msg_id, uint8_t rate
 
     rc = neom9n_send_ubx(dev, UBX_CLASS_CFG, UBX_CFG_MSG, payload, 3);
     if (rc == NACK) {
-        LOG_ERR("Config MSG not acknowledged %s", dev->name);
+        //LOG_ERR("Config MSG not acknowledged %s", dev->name);
     } else if (rc == ACK) {
-        LOG_INF("Config MSG acknowledged %s", dev->name);
+        //LOG_INF("Config MSG acknowledged %s", dev->name);
     } else if (rc) {
-        LOG_ERR("Error %d config MSG for %s", rc, dev->name);
+        //LOG_ERR("Error %d config MSG for %s", rc, dev->name);
     }
 
     return rc;
@@ -674,6 +740,7 @@ static const struct neom9n_api neom9n_api = {
     .get_longitude = neom9n_get_longitude,
     .get_ew = neom9n_get_ew,
     .get_time = neom9n_get_time,
+    .get_timestamp = neom9n_get_timestamp,
     .get_satellites = neom9n_get_satellites,
 };
 

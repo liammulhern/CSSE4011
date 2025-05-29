@@ -1,0 +1,65 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0" version="27.0.3">
+  <diagram name="Page-1" id="RNYmdDG09AtqZu1HV84A">
+    <mxGraphModel dx="1146" dy="707" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="NS8NjDW7z8NgxkJJr4D1-1" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/iot/IoT_Hub.svg;" parent="1" vertex="1">
+          <mxGeometry x="450" y="296" width="64" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="Jb93CqCRCmrGKmIRv58C-1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="820" y="328" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-1" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/iot/Function_Apps.svg;" vertex="1" parent="1">
+          <mxGeometry x="610" y="298" width="68" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-2" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/databases/Azure_Database_PostgreSQL_Server.svg;" vertex="1" parent="1">
+          <mxGeometry x="830" y="296" width="48" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-3" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/blockchain/Azure_Blockchain_Service.svg;" vertex="1" parent="1">
+          <mxGeometry x="820" y="450" width="68" height="68" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=-0.007;entryY=0.625;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="Jb93CqCRCmrGKmIRv58C-1" target="Jb93CqCRCmrGKmIRv58C-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=-0.022;entryY=0.508;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="NS8NjDW7z8NgxkJJr4D1-1" target="Jb93CqCRCmrGKmIRv58C-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-7" value="IoT Hub" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="447" y="360" width="70" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-8" value="Functions" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="603" y="358" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-9" value="PSQL DB" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="814" y="360" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-10" value="Blockchain" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="814" y="530" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="Jb93CqCRCmrGKmIRv58C-11">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="332" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-11" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/other/Defender_Programable_Board.svg;" vertex="1" parent="1">
+          <mxGeometry x="140" y="298" width="68" height="68" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-13" value="Edge-Gateway" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="280" y="368" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-14" value="" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=12;image=img/lib/azure2/hybrid_multicloud/Azure_Operator_Insights.svg;" vertex="1" parent="1">
+          <mxGeometry x="306" y="300" width="68" height="68" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=-0.037;entryY=0.605;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="1" source="Jb93CqCRCmrGKmIRv58C-14" target="NS8NjDW7z8NgxkJJr4D1-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Jb93CqCRCmrGKmIRv58C-16" value="Tracker" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="144" y="366" width="60" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

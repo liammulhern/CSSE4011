@@ -1,3 +1,23 @@
+/ {
+    aliases {
+        rtc2 = &rtc2;
+        temp = &hts221;
+        pressure = &lps22hb_press;
+        gas = &ccs811;
+        accel0 = &lis2dh12;
+    };
+};
+
+&rtc2 {
+    label = "RTC_2";
+    status = "okay";
+    prescaler = <1>;
+};
+
+&sx1509b {
+    status = "okay";
+};
+
 &i2c1 {
     status = "okay";
     compatible = "nordic,nrf-twim";
