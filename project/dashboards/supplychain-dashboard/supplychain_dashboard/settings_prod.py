@@ -174,8 +174,10 @@ STATICFILES_DIRS = [
 # ------------------------------------------------------------------------------
 # EXTERNAL SERVICES
 # ------------------------------------------------------------------------------
+
 IOTA_NODE_URL = os.getenv('IOTA_NODE_URL')
 AZURE_IOTHUB_CONNECTION_STRING = os.getenv('AZ_IOTHUB_CONNECTION_STRING')
+AZURE_IOTHUB_DEVICE_CONNECTION_STRING = os.getenv('AZ_IOTHUB_DEVICE_CONNECTION_STRING')
 
 # ------------------------------------------------------------------------------
 # LOGGING
