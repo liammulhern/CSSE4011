@@ -50,15 +50,22 @@ def create_productevent_from_trackerevent(trackerevent: TrackerEvent) -> List[Pr
 
             # 4) Otherwise, create a ProductEvent for each product in the order
             for item in order.items.select_related('product'):
-                productevent = ProductEvent.objects.create(
-                    message_id=trackerevent.message_id,
-                    product=item.product,
-                    trackerevent=trackerevent,
-                    event_type=ProductEvent.EVENT_TYPE_TELEMETRY,
-                    payload=trackerevent.payload,
-                    timestamp=trackerevent.timestamp,
-                    recorded_by=None,
-                )
+                try:
+                    productevent, created = ProductEvent.objects.get_or_create(
+                        message_id=trackerevent.message_id,
+                        product=item.product,
+                        trackerevent=trackerevent,
+                        event_type=ProductEvent.EVENT_TYPE_TELEMETRY,
+                        payload=trackerevent.payload,
+                        timestamp=trackerevent.timestamp,
+                        recorded_by=None,
+                    )
+                except Exception as e:
+                    logger.error(f"Could not create productevent {e}")
+                    continue
+
+                if created:
+                    continue
 
                 # Verify the product hash
                 if HexStr(trackerevent.data_hash) != trackerevent.compute_hash():
@@ -67,6 +74,7 @@ def create_productevent_from_trackerevent(trackerevent: TrackerEvent) -> List[Pr
                         message=f"Payload hash mismatch for product event.",
                         timestamp=trackerevent.timestamp,
                         notication_type=ProductNotification.NOTICATION_TYPE_ALERT,
+                        order=order
                     )
 
                     logger.error(

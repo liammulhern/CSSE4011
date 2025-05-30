@@ -128,6 +128,41 @@ class ProductOrderStatusAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+from supplychain.models import ProductOrderTracker
+@admin.register(ProductOrderTracker)
+class ProductOrderTrackerAdmin(admin.ModelAdmin):
+    """
+    Admin interface for managing ProductOrderTracker instances.
+    """
+    list_display = (
+        'id',
+        'order',
+        'tracker',
+        'assigned_timestamp',
+        'created_timestamp',
+        'created_by',
+    )
+    list_filter = (
+        'order',
+        'tracker',
+        'created_by',
+        'assigned_timestamp',
+    )
+    search_fields = (
+        'order__id',
+        'tracker__tracker_key',
+        'created_by__username',
+    )
+    raw_id_fields = (
+        'order',
+        'tracker',
+        'created_by',
+    )
+    readonly_fields = (
+        'created_timestamp',
+    )
+
+
 class ProductOrderItemInline(admin.TabularInline):
     """
     Inline for line-items on a ProductOrder.
@@ -153,6 +188,13 @@ class ProductOrderStatusInline(admin.TabularInline):
     ordering = ('-timestamp',)
     show_change_link = True
 
+class ProductOrderTrackerInline(admin.TabularInline):
+    model = ProductOrderTracker
+    extra = 0
+    raw_id_fields = ('tracker', 'created_by')
+    readonly_fields = ('created_timestamp',)
+    fields = ('tracker', 'assigned_timestamp', 'created_by', 'created_timestamp')
+
 
 from supplychain.models import ProductOrder
 @admin.register(ProductOrder)
@@ -164,6 +206,7 @@ class ProductOrderAdmin(admin.ModelAdmin):
         ProductOrderItemInline,
         ProductOrderRequirementInline,
         ProductOrderStatusInline,
+        ProductOrderTrackerInline
     ]
     readonly_fields = ('current_status',)
     fieldsets = (

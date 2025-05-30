@@ -83,7 +83,7 @@ def tracker_raw_data_ingest(gatewayeventraw: GatewayEventRaw, payload: Telemetry
     hash = gatewayeventraw.signature.get('value', '')
 
     # 5. Create TrackerEvent instance
-    tracker_event = TrackerEvent.objects.create(
+    tracker_event, created = TrackerEvent.objects.get_or_create(
         message_id=gatewayeventraw.message_id,
         tracker=tracker,
         gateway=gatewayeventraw.gateway,
@@ -93,15 +93,19 @@ def tracker_raw_data_ingest(gatewayeventraw: GatewayEventRaw, payload: Telemetry
         data_hash=hash,
     )
 
+    if not created:
+        logger.error(f"Payload already ingested for {tracker_event.message_id}")
+        return tracker_event
+
     if HexStr(hash) != tracker_event.compute_hash():
         TrackerNotification.objects.create(
             tracker=tracker,
-            message=f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {payload['hash']}.",
+            message=f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {hash}.",
             timestamp=timestamp,
             notication_type=TrackerNotification.NOTICATION_TYPE_ALERT,
         )
 
-        logger.error(f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {payload['hash']}.")
+        logger.error(f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {hash}.")
     else:
         # Upload the tracker event to the blockchain
         block_id = tracker_event.anchor_on_iota()

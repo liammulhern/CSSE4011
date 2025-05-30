@@ -57,16 +57,16 @@ def gateway_raw_data_ingest(data: GatewayData) -> GatewayEventRaw:
     payload = data['payload']
 
     # 6. Validate timestamp
-    if 'timestamp' not in header or not isinstance(header['timestamp'], str):
-        raise ValueError("Invalid or missing timestamp in header. Must be a string.")
+    if 'timestamp' not in payload or not isinstance(payload['timestamp'], str):
+        raise ValueError(f"Invalid or missing timestamp in payload. Must be a string. {payload}")
 
     try:
-        timestamp = datetime.fromisoformat(header['timestamp'])
+        timestamp = datetime.fromisoformat(payload['timestamp'])
     except ValueError:
         raise ValueError("Invalid timestamp format. Must be an ISO 8601 string.")
 
     # 7. Create a new GatewayEventRaw instance
-    event = GatewayEventRaw.objects.create(
+    event, _ = GatewayEventRaw.objects.get_or_create(
         message_id=header['messageId'],
         gateway_key=header['gatewayId'],
         message_type=header['messageType'],

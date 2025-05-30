@@ -2,6 +2,8 @@ import os
 import json
 import logging
 import threading
+import uuid
+import datetime
 
 from azure.iot.hub import IoTHubRegistryManager
 from azure.iot.device import IoTHubDeviceClient, Message
@@ -119,14 +121,14 @@ def send_test_message_to_azure_iot_hub() -> None:
     """
     payload = {
       "header": {
-        "messageId": "d1c5261e-49ef-4cfc-a782-473549797b01",
+        "messageId": f"{uuid.uuid4()}",
         "gatewayId": "GW-01",
         "schemaVersion": "1.0",
         "messageType": "telemetry"
       },
       "payload": {
         "deviceId": "dev-1",
-        "time": "1970-01-01T00:00:00",
+        "timestamp": f"{datetime.now().isoformat()}",
         "uptime": "494",
         "location": {
           "latitude": "27.5002432",
