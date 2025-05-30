@@ -31,7 +31,7 @@ export const APP_MENU: Record<string, { name: string, routes: IDashboardMenus[] 
       },
       {
         title: 'Trackers',
-        icon: 'ClipboardCheck',
+        icon: 'Cpu',
         path: 'trackers',
         description: 'Manage Trackers'
       },

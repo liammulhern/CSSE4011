@@ -12,6 +12,34 @@ wheels = [
 ]
 
 [[package]]
+name = "azure-core"
+version = "1.34.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+    { name = "six" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c9/29/ff7a519a315e41c85bab92a7478c6acd1cf0b14353139a08caee4c691f77/azure_core-1.34.0.tar.gz", hash = "sha256:bdb544989f246a0ad1c85d72eeb45f2f835afdcbc5b45e43f0dbde7461c81ece", size = 297999, upload-time = "2025-05-01T23:17:27.59Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/84/9e/5c87b49f65bb16571599bc789857d0ded2f53014d3392bc88a5d1f3ad779/azure_core-1.34.0-py3-none-any.whl", hash = "sha256:0615d3b756beccdb6624d1c0ae97284f38b78fb59a2a9839bf927c66fbbdddd6", size = 207409, upload-time = "2025-05-01T23:17:29.818Z" },
+]
+
+[[package]]
+name = "azure-iot-hub"
+version = "2.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "msrest" },
+    { name = "uamqp" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/47/77/df28c97d666a7eaf6f041047843de1ba2730af8de85e0e308643ddef5fdf/azure-iot-hub-2.6.1.tar.gz", hash = "sha256:e952a7517448d826e3a95d37e9ba258d932e7aa45fde07ea4ded391c45fdf47c", size = 46233, upload-time = "2022-11-21T22:23:52.704Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/59/11/e20413cad93afdf3205ae110db8a064149ad90e93d329372ccf34d1dd16c/azure_iot_hub-2.6.1-py2.py3-none-any.whl", hash = "sha256:560b1aa1c51bc011d0c4de99d34ef4d60d70869c8f6a4187630fab2c21ed9fde", size = 102507, upload-time = "2022-11-21T22:23:51.004Z" },
+]
+
+[[package]]
 name = "certifi"
 version = "2025.4.26"
 source = { registry = "https://pypi.org/simple" }
@@ -278,6 +306,40 @@ wheels = [
 ]
 
 [[package]]
+name = "isodate"
+version = "0.7.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/4d/e940025e2ce31a8ce1202635910747e5a87cc3a6a6bb2d00973375014749/isodate-0.7.2.tar.gz", hash = "sha256:4cd1aa0f43ca76f4a6c6c0292a85f40b35ec2e43e315b59f06e6d32171a953e6", size = 29705, upload-time = "2024-10-08T23:04:11.5Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/aa/0aca39a37d3c7eb941ba736ede56d689e7be91cab5d9ca846bde3999eba6/isodate-0.7.2-py3-none-any.whl", hash = "sha256:28009937d8031054830160fce6d409ed342816b543597cece116d966c6d99e15", size = 22320, upload-time = "2024-10-08T23:04:09.501Z" },
+]
+
+[[package]]
+name = "msrest"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "certifi" },
+    { name = "isodate" },
+    { name = "requests" },
+    { name = "requests-oauthlib" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/68/77/8397c8fb8fc257d8ea0fa66f8068e073278c65f05acb17dcb22a02bfdc42/msrest-0.7.1.zip", hash = "sha256:6e7661f46f3afd88b75667b7187a92829924446c7ea1d169be8c4bb7eeb788b9", size = 175332, upload-time = "2022-06-13T22:41:25.111Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/15/cf/f2966a2638144491f8696c27320d5219f48a072715075d168b31d3237720/msrest-0.7.1-py3-none-any.whl", hash = "sha256:21120a810e1233e5e6cc7fe40b474eeb4ec6f757a15d7cf86702c369f9567c32", size = 85384, upload-time = "2022-06-13T22:41:22.42Z" },
+]
+
+[[package]]
+name = "oauthlib"
+version = "3.2.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6d/fa/fbf4001037904031639e6bfbfc02badfc7e12f137a8afa254df6c4c8a670/oauthlib-3.2.2.tar.gz", hash = "sha256:9859c40929662bec5d64f34d01c99e093149682a3f38915dc0655d5a633dd918", size = 177352, upload-time = "2022-10-17T20:04:27.471Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/80/cab10959dc1faead58dc8384a781dfbf93cb4d33d50988f7a69f1b7c9bbe/oauthlib-3.2.2-py3-none-any.whl", hash = "sha256:8139f29aac13e25d502680e9e19963e83f16838d48a0d71c287fe40e7067fbca", size = 151688, upload-time = "2022-10-17T20:04:24.037Z" },
+]
+
+[[package]]
 name = "packaging"
 version = "25.0"
 source = { registry = "https://pypi.org/simple" }
@@ -384,6 +446,28 @@ wheels = [
 ]
 
 [[package]]
+name = "requests-oauthlib"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "oauthlib" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/f2/05f29bc3913aea15eb670be136045bf5c5bbf4b99ecb839da9b422bb2c85/requests-oauthlib-2.0.0.tar.gz", hash = "sha256:b3dffaebd884d8cd778494369603a9e7b58d29111bf6b41bdc2dcd87203af4e9", size = 55650, upload-time = "2024-03-22T20:32:29.939Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/5d/63d4ae3b9daea098d5d6f5da83984853c1bbacd5dc826764b249fe119d24/requests_oauthlib-2.0.0-py2.py3-none-any.whl", hash = "sha256:7dd8a5c40426b779b0868c404bdef9768deccf22749cde15852df527e6269b36", size = 24179, upload-time = "2024-03-22T20:32:28.055Z" },
+]
+
+[[package]]
+name = "six"
+version = "1.17.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
 name = "sqlparse"
 version = "0.5.3"
 source = { registry = "https://pypi.org/simple" }
@@ -397,6 +481,7 @@ name = "supplychain-dashboard"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "azure-iot-hub" },
     { name = "debugpy" },
     { name = "dj-database-url" },
     { name = "django" },
@@ -418,6 +503,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "azure-iot-hub", specifier = ">=2.6.1" },
     { name = "debugpy", specifier = ">=1.8.14" },
     { name = "dj-database-url", specifier = ">=2.3.0" },
     { name = "django", specifier = ">=4.2" },
@@ -462,6 +548,26 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/95/32/1a225d6164441be760d75c2c42e2780dc0873fe382da3e98a2e1e48361e5/tzdata-2025.2.tar.gz", hash = "sha256:b60a638fcc0daffadf82fe0f57e53d06bdec2f36c4df66280ae79bce6bd6f2b9", size = 196380, upload-time = "2025-03-23T13:54:43.652Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5c/23/c7abc0ca0a1526a0774eca151daeb8de62ec457e77262b66b359c3c7679e/tzdata-2025.2-py2.py3-none-any.whl", hash = "sha256:1a403fada01ff9221ca8044d701868fa132215d84beb92242d9acd2147f667a8", size = 347839, upload-time = "2025-03-23T13:54:41.845Z" },
+]
+
+[[package]]
+name = "uamqp"
+version = "1.6.11"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "certifi" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2e/99/e5fbdd1964f2b7f04fcfacd9c8252a998725af2c2b186d5436ff0499a886/uamqp-1.6.11.tar.gz", hash = "sha256:6bab2fb249cb2ca312795093747227de3f09648f8dad77f432b49a45e5bc403d", size = 4625687, upload-time = "2024-10-28T19:29:22.565Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9c/eb/9d01c878c5be6f10e1763bfe209a38481ecf8801434f3fa315ba2ab64164/uamqp-1.6.11-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:4bc48997ee1f3717edb5bb3713cf2b8f9b7641a8167194a57782a8b2f26a7e2a", size = 1260523, upload-time = "2024-10-28T19:29:40.512Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/55/048b333fd1368331ae87b422fa180bdab38077623992e37dbed37d2fe8fe/uamqp-1.6.11-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fb36875dceabc0bf7ca0523df03d120a8b489d378e5cf152afb10f693f48574c", size = 3893553, upload-time = "2024-10-28T19:29:27.776Z" },
+    { url = "https://files.pythonhosted.org/packages/5c/20/24c4108c518f06a8f5a911c2c9a643abcd1c641ed6578c6b2d6dc994b1ef/uamqp-1.6.11-cp311-cp311-win_amd64.whl", hash = "sha256:9b4aef57893233f3b0b6b90677964357bc845f510d8794038622095a745ab47b", size = 1077366, upload-time = "2024-10-28T19:29:55.786Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/11/dfa0f24813b5b5dedf86f3ca97c66d6e2b1df2b2e3cb09b537cef1697b98/uamqp-1.6.11-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:db6dd3feb163bcda69ced8453726c2b2110b99357e46e4ac09c496128438c954", size = 1284601, upload-time = "2024-10-28T19:29:42.089Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/70/160c1c2be8833f7f824e88aa3761e6b8d6feefeb7a81764fdeabc58ea689/uamqp-1.6.11-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dd1ef9bf90e527a13581cd9b9755d75c1ae70985e108dbdaa532c1472c9dca2e", size = 4047821, upload-time = "2024-10-28T19:29:29.834Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/fd/2ee4cbe2c727f8b263560ee49558de8103f1f6c7d0f32bd196e5b4cb0bdf/uamqp-1.6.11-cp312-cp312-win_amd64.whl", hash = "sha256:71a7385ff98b46ee6726be93e34785e473e78b49e513519515420384bbdb37c8", size = 1065582, upload-time = "2024-10-28T19:29:57.614Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/c8/796b149cc12ce77e0c36efabcdab5f29483f4fcf4fbfb9e5862967ad6210/uamqp-1.6.11-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:9672e1a49cf3c669c4ed664a9d487de8c8361faf0ba5475c5315f2ef379a2fea", size = 1283778, upload-time = "2024-10-28T19:29:44.277Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/df/84419ba5553502d2a82666c86f83c2afd63488c00826493c1c36edc702ed/uamqp-1.6.11-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9d1b77c5fd21271176658a90b3a2a6b99f9ec7dcb9d435e608e231fe62a74440", size = 4047204, upload-time = "2024-10-28T19:29:31.748Z" },
+    { url = "https://files.pythonhosted.org/packages/13/03/adf1b15a05d3558a5dba15c1813bf6bc84e37c19500a578a8062866ee019/uamqp-1.6.11-cp313-cp313-win_amd64.whl", hash = "sha256:6f155ce0ed6f0aabd182205d295742714be005c1079b32a5cdeed1c4511c8e89", size = 1065692, upload-time = "2024-10-28T19:29:59.709Z" },
 ]
 
 [[package]]

@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "azure-iot-hub>=2.6.1",
     "debugpy>=1.8.14",
     "dj-database-url>=2.3.0",
     "django>=4.2",
