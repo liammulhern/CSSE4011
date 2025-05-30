@@ -42,10 +42,10 @@ void read_loop(const struct device *flash_dev, uint8_t write_block_size) {
     struct sensor_blk sensors;
     for (int i = flash_vars.read_size; i < flash_vars.size; i++) {
         flash_read_sensor(flash_dev, write_block_size,  &flash_vars, &sensors);
-        LOG_INF("Write: temp: %u   press: %u    hum: %u    gas: %u    x_accel: %d    y_accel: %d    z_accel: %d", 
-                sensors.temp, sensors.press, sensors.hum, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
-        LOG_INF("Write: time: %u   uptime: %u    lat: %f   lon: %f   alt: %f\n", 
-                sensors.time, sensors.uptime, (double)sensors.lat, (double)sensors.lon, (double)sensors.alt);
+        // LOG_INF("Read: temp: %u   press: %u    hum: %u    gas: %u    x_accel: %d    y_accel: %d    z_accel: %d", 
+        //         sensors.temp, sensors.press, sensors.hum, sensors.gas, sensors.x_accel, sensors.y_accel, sensors.z_accel);
+        // LOG_INF("Read: time: %u   uptime: %u    lat: %f   lon: %f   alt: %f\n", 
+        //         sensors.time, sensors.uptime, (double)sensors.lat, (double)sensors.lon, (double)sensors.alt);
         pack_sensor_data(&sensors);
     }
     write_consts(flash_dev, write_block_size, flash_vars.size, flash_vars.read_size, flash_vars.head, flash_vars.tail, flash_vars.wrap_around);
