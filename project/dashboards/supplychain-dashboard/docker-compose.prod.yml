@@ -17,6 +17,8 @@ services:
     volumes:
       - letsencrypt:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - traefik_proxy
   pathledger-backend:
     build:
       context: .
@@ -24,26 +26,44 @@ services:
       dockerfile: Dockerfile.django
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.pathledger.rule=Host(`pathledger.live/api`)"
+      # API & admin
+      - "traefik.http.routers.pathledger.rule=Host(`pathledger.live`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.pathledger.priority=10"
       - "traefik.http.routers.pathledger.entrypoints=websecure"
       - "traefik.http.routers.pathledger.tls.certresolver=myresolver"
-    ports:
-      - "3000:8000"
+      # static files
+      - "traefik.http.routers.pathledger-static.rule=Host(`pathledger.live`) && PathPrefix(`/static`)"
+      - "traefik.http.routers.pathledger-static.entrypoints=websecure"
+      - "traefik.http.routers.pathledger-static.tls.certresolver=myresolver"
+      # tell Traefik where Django listens internally
+      - "traefik.http.services.pathledger.loadbalancer.server.port=8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=supplychain_dashboard.settings_prod
     env_file:
       - .prod.env
+    networks:
+      - traefik_proxy
   pathledger-fronted:
     build:
       context: .
       target: prod
       dockerfile: Dockerfile.web
     labels:
-      - "traefik.http.routers.pathledger.rule=Host(`pathledger.live`)"
-    ports:
-      - "3001:3000"
-    depends_on:
-      - pathledger-backend
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_proxy"
+      # all non-/api traffic → this service
+      - "traefik.http.routers.frontend.rule=Host(`pathledger.live`)"
+      - "traefik.http.routers.frontend.tls=true"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=myresolver" 
+      - "traefik.http.routers.frontend.priority=1" 
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
     env_file:
       - .prod.env
+    networks:
+      - traefik_proxy
 volumes:
   letsencrypt:
-
+networks:
+  traefik_proxy:
+    driver: bridge

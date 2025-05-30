@@ -14,18 +14,17 @@ RUN npm run build   # outputs to /app/dist
 # ┌────────────────────────────────────────────────────────────────────────────┐
 # │ Prod: serve with nginx                                                  │
 # └────────────────────────────────────────────────────────────────────────────┘
-FROM nginx:1.24-alpine AS prod
+FROM node:18-alpine AS prod
 LABEL org.opencontainers.image.authors="liam@your.org" \
       org.opencontainers.image.version="1.0.0"
 
-# use non-root (nginx:alpine runs as nginx user by default)
-USER nginx
+RUN npm install -g serve
 
-# Copy built assets into nginx’s html dir
-COPY --from=builder /app/dist /usr/share/nginx/html
+# copy only the build artifacts
+COPY --from=builder /app/dist ./dist
 
-#Expose HTTP port
 EXPOSE 80
+CMD ["serve", "-s", "dist", "-l", "80"]
 
 # Healthcheck against root
 HEALTHCHECK --interval=30s --timeout=5s \

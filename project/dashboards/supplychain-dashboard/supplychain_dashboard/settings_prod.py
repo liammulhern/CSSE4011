@@ -25,6 +25,8 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 # ------------------------------------------------------------------------------
 # APPLICATIONS
@@ -57,6 +59,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -70,7 +73,6 @@ MIDDLEWARE = [
 # ------------------------------------------------------------------------------
 ROOT_URLCONF = 'supplychain_dashboard.urls'
 WSGI_APPLICATION = 'supplychain_dashboard.wsgi.application'
-
 # ------------------------------------------------------------------------------
 # TEMPLATES
 # ------------------------------------------------------------------------------
@@ -160,8 +162,14 @@ USE_TZ = True
 # ------------------------------------------------------------------------------
 # STATIC FILES
 # ------------------------------------------------------------------------------
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'supplychain_dashboard' / 'static']
+
+STATIC_URL = 'static/'
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STATICFILES_DIRS = [
+  BASE_DIR / "supplychain_dashboard" / "static",
+]
 
 # ------------------------------------------------------------------------------
 # EXTERNAL SERVICES

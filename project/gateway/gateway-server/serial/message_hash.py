@@ -50,8 +50,6 @@ def compute_tracker_hash(json_message: str) -> str:
         f'}}'
     )
 
-    print(snippet)
-
     # 4. turn it into bytes and pad out to 1024 bytes with NULs
     data = snippet.encode('ascii')
     if len(data) + 1 > JSON_BUFFER_SIZE:
