@@ -170,14 +170,13 @@ void hash_sensor_blk(const struct sensor_blk *data, uint8_t *hash_buffer) {
         printk("SHA256 update failed\n");
         return;
     }
-
     // Finalize the hash computation and output the result into digest buffer
     if (tc_sha256_final(hash_buffer, &sha256_ctx) != TC_CRYPTO_SUCCESS) {
         printk("SHA256 final failed\n");
         return;
     }
 
-    print_sha256_digest(hash_buffer);
+    //print_sha256_digest(hash_buffer);
 }
 
 static void fill_json_packet_from_tracker_payload(const struct sensor_blk *data, char* json_output) {
@@ -510,7 +509,7 @@ extern void pack_sensor_data(const struct sensor_blk *sensor) {
         if (err) {
             printk("[TRACKER] Failed to send notification (err %d)\n", err);
         } else {
-            printk("[TRACKER] Notification sent\n");
+            //printk("[TRACKER] Notification sent\n");
         }
     }
 }
@@ -546,14 +545,14 @@ extern int init_bluetooth(void) {
  */
 extern int start_advertising(void) {
     int err;
-    printk("[TRACKER] Starting advertising...\n");
+    //printk("[TRACKER] Starting advertising...\n");
     err = bt_le_adv_start(&adv_params, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (err) {
         printk("[TRACKER] Advertising failed to start (err %d)\n", err);
         return err;
     }
 
-    printk("[TRACKER] Advertising started\n");
+    //printk("[TRACKER] Advertising started\n");
     k_msleep(3000);  // Wait before restarting next advertisement cycle ?????
     return 0;
 }
@@ -568,7 +567,7 @@ extern int start_advertising(void) {
 extern int stop_advertising(void) {
     k_msleep(2000); // wait for packets to clear before stopping
     int err;
-    printk("[TRACKER] Stopping advertising...\n");
+    //printk("[TRACKER] Stopping advertising...\n");
 
     err = bt_le_adv_stop();
     if (err) {
@@ -576,7 +575,7 @@ extern int stop_advertising(void) {
         return err;
     }
 
-    printk("[TRACKER] Advertising stopped\n");
+    //printk("[TRACKER] Advertising stopped\n");
     return 0;
 }
 

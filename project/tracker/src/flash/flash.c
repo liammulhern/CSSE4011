@@ -78,3 +78,19 @@ void flash_write_sensor(const struct device *flash_dev, uint8_t write_block_size
     flash_vars.head = offset;
     write_consts(flash_dev, write_block_size, flash_vars.size, flash_vars.read_size, flash_vars.head, flash_vars.tail, flash_vars.wrap_around);
 }
+
+
+void flash_read_sensor(const struct device *flash_dev, uint8_t write_block_size, struct flash_consts *flash_vars, struct sensor_blk *sensors) {
+
+    uint32_t offset = flash_vars->tail + (flash_vars->read_size * sizeof(struct sensor_blk));
+    if (offset >= 0x00080000) {
+        offset = TEST_PARTITION_OFFSET + FLASH_PAGE_SIZE;
+    }
+    if (offset == flash_vars->head) {
+        return;
+    }
+    flash_read(flash_dev, offset, sensors, sizeof(struct sensor_blk));
+    offset += sizeof(sensors);
+    flash_vars->read_size++;
+    return;
+}

@@ -49,4 +49,7 @@ void flash_write_sensor(const struct device *flash_dev, uint8_t write_block_size
 void write_consts(const struct device *flash_dev, uint8_t write_block_size, 
     uint32_t size, uint32_t read_size, uint32_t head, uint32_t tail, uint8_t wrap_around);
 
+void flash_read_sensor(const struct device *flash_dev, uint8_t write_block_size,
+     struct flash_consts *flash_vars, struct sensor_blk *sensors);
+     
 #endif
