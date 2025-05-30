@@ -56,12 +56,19 @@ def gateway_raw_data_ingest(data: GatewayData) -> GatewayEventRaw:
 
     payload = data['payload']
 
+    time = ""
+
     # 6. Validate timestamp
     if 'timestamp' not in payload or not isinstance(payload['timestamp'], str):
-        raise ValueError(f"Invalid or missing timestamp in payload. Must be a string. {payload}")
+        if 'time' not in payload or not isinstance(payload['time'], str):
+            raise ValueError(f"Invalid or missing timestamp in payload. Must be a string. {payload}")
+        else:
+            time = payload['time']
+    else:
+        time = payload['timestamp']
 
     try:
-        timestamp = datetime.fromisoformat(payload['timestamp'])
+        timestamp = datetime.fromisoformat(time)
     except ValueError:
         raise ValueError("Invalid timestamp format. Must be an ISO 8601 string.")
 

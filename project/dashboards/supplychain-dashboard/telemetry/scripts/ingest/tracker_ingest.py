@@ -1,5 +1,6 @@
 from iota_sdk import HexStr
 from supplychain.models import Gateway, TrackerEvent, Tracker
+from supplychain.scripts import compute_event_hash
 
 from notifications.models import TrackerNotification
 
@@ -73,14 +74,28 @@ def tracker_raw_data_ingest(gatewayeventraw: GatewayEventRaw, payload: Telemetry
     if not matches_typed_dict(payload, TelemetryPayload):
         raise ValueError("Invalid payload format. Must match TelemetryPayload TypedDict.")
 
+
+    time = ""
+
+    # 6. Validate timestamp
+    if 'timestamp' not in payload or not isinstance(payload['timestamp'], str):
+        if 'time' not in payload or not isinstance(payload['time'], str):
+            raise ValueError(f"Invalid or missing timestamp in payload. Must be a string. {payload}")
+        else:
+            time = payload['time']
+    else:
+        time = payload['timestamp']
+
+
     # 3. Validate timestamp
     try:
-        timestamp = datetime.fromisoformat(payload['timestamp'])
+        timestamp = datetime.fromisoformat(time)
     except ValueError:
         raise ValueError("Invalid timestamp format. Must be an ISO 8601 string.")
 
     print(gatewayeventraw.signature.get('value', ''))
-    hash = gatewayeventraw.signature.get('value', '')
+
+    hash = compute_event_hash.compute_tracker_hash(payload)
 
     # 5. Create TrackerEvent instance
     tracker_event, created = TrackerEvent.objects.get_or_create(
@@ -90,7 +105,7 @@ def tracker_raw_data_ingest(gatewayeventraw: GatewayEventRaw, payload: Telemetry
         event_type=TrackerEvent.EVENT_TYPE_TELEMETRY,
         payload=payload,
         timestamp=timestamp,
-        data_hash=hash,
+        data_hash=HexStr(hash),
     )
 
     if not created:

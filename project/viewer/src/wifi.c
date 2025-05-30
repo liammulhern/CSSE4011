@@ -335,7 +335,7 @@ void wifi_thread(void)
         gui_notify_wifi_status(LV_SYMBOL_WIFI, wifi_ssid, LV_SYMBOL_LOOP);
 
         /* Perform an HTTP query to fetch notifications */
-        int ret = http_query(API_HOST, "/api/p");
+        int ret = http_query(API_HOST, "/api/");
 
         if (ret < 0) {
             LOG_ERR("HTTP Query failed: %d", ret);

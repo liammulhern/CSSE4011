@@ -26,16 +26,30 @@ services:
       dockerfile: Dockerfile.django
     labels:
       - "traefik.enable=true"
-      # API & admin
-      - "traefik.http.routers.pathledger.rule=Host(`pathledger.live`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.pathledger.priority=10"
-      - "traefik.http.routers.pathledger.entrypoints=websecure"
-      - "traefik.http.routers.pathledger.tls.certresolver=myresolver"
-      # static files
+      - "traefik.docker.network=traefik_proxy"
+
+      # HTTPS router (handles ALL except the HTTP-specific endpoint)
+      - "traefik.http.routers.pathledger-secure.rule=Host(`pathledger.live`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.pathledger-secure.entrypoints=websecure"
+      - "traefik.http.routers.pathledger-secure.tls.certresolver=myresolver"
+      - "traefik.http.routers.pathledger-secure.priority=10"
+
+      # HTTP router for the specific public endpoint without redirect
+      - "traefik.http.routers.public-http.rule=Host(`pathledger.live`) && Path(`/api/notifications/public`)"
+      - "traefik.http.routers.public-http.entrypoints=web"
+      - "traefik.http.routers.public-http.priority=20"  # Higher priority to override redirect
+      - "traefik.http.routers.public-http.middlewares=no-redirect"
+
+      # Middleware explicitly disabling HTTP-to-HTTPS redirect
+      - "traefik.http.middlewares.no-redirect.redirectscheme.scheme=http"
+      - "traefik.http.middlewares.no-redirect.redirectscheme.permanent=false"
+
+      # Static files router (HTTPS)
       - "traefik.http.routers.pathledger-static.rule=Host(`pathledger.live`) && PathPrefix(`/static`)"
       - "traefik.http.routers.pathledger-static.entrypoints=websecure"
       - "traefik.http.routers.pathledger-static.tls.certresolver=myresolver"
-      # tell Traefik where Django listens internally
+
+      # Backend load balancer port
       - "traefik.http.services.pathledger.loadbalancer.server.port=8000"
     environment:
       - DJANGO_SETTINGS_MODULE=supplychain_dashboard.settings_prod
