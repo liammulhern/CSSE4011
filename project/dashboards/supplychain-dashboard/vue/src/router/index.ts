@@ -80,11 +80,11 @@ const router = createRouter({
           }
         },
         {
-          path: 'tracker/:id',
-          component: () => import('@/views/dashboard/pages/tracker/Index.vue'),
-          name: 'tracker_index',
+          path: 'trackers',
+          component: () => import('@/views/dashboard/pages/trackers/Index.vue'),
+          name: 'trackers_index',
           meta: {
-            title: 'Tracker',
+            title: 'Trackers',
             hasQRAuth: true
           },
         },

@@ -51,3 +51,23 @@ class TrackerNotificationSerializer(serializers.ModelSerializer):
             'acknowledged_by',
         ]
 
+class PublicProductNotificationSerializer(serializers.ModelSerializer):
+    type = serializers.CharField(source="notication_type")
+    message = serializers.CharField(source="message")
+    timestamp = serializers.DateTimeField(
+        format="%Y-%m-%dT%H:%M:%SZ",
+        source="timestamp"
+    )
+
+    class Meta:
+        model = ProductNotification
+        fields = ("id", "type", "message", "timestamp")
+
+
+class IoTHubMessageSerializer(serializers.Serializer):
+    deviceID = serializers.CharField(max_length=128)
+    messageType = serializers.CharField(max_length=64)
+    # allow any JSON value (string, number, dict, list, etc.)
+    message = serializers.JSONField(
+        help_text="The actual content of the message; can be string, number, object, etc."
+    )

@@ -29,6 +29,12 @@ export const APP_MENU: Record<string, { name: string, routes: IDashboardMenus[] 
         path: 'product_orders',
         description: 'Manage Product Orders'
       },
+      {
+        title: 'Trackers',
+        icon: 'ClipboardCheck',
+        path: 'trackers',
+        description: 'Manage Trackers'
+      },
     ],
   },
 };
