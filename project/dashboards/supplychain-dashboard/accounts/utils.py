@@ -9,9 +9,11 @@ def get_user_roles(user: User, company: Company) -> List[str]:
     if not user or not user.is_authenticated:
         return []
 
-    role_names = user.user_roles.filter(role__company=company).values_list('role__name', flat=True)
-
-    print(role_names)
+    try:
+        role_names = user.user_roles.filter(role__company=company).values_list('role__name', flat=True)
+    except Exception as e:
+        print(e)
+        return []
 
     return role_names
 

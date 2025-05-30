@@ -29,11 +29,16 @@ class ProductViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         user = self.request.user
 
-        return qs.filter(
-            owner_id__in=user.user_companies.filter(
+        try:
+            companies = user.user_companies.filter(
                 is_active=True
             ).values_list('company_id', flat=True)
-        )
+
+            return qs.filter(owner_id__in=companies)
+        except Exception as e:
+            print(e)
+
+        return qs
 
     def get_serializer_class(self):
         if self.action == "events":

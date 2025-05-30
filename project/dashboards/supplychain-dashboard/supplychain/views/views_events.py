@@ -44,11 +44,18 @@ class ProductEventViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         user = self.request.user
 
-        return qs.filter(
-            product__owner_id__in=user.user_companies.filter(
+        try:
+            companies = user.user_companies.filter(
                 is_active=True
             ).values_list('company_id', flat=True)
-        )
+
+            return qs.filter(
+                product__owner_id__in=companies
+            )
+        except Exception as e:
+            print(e)
+
+        return qs
 
     @action(detail=True, methods=['post'], url_path='verify')
     def verify(self, request, pk=None):

@@ -30,6 +30,15 @@ http.interceptors.response.use(
     const requestUrl = originalRequest?.url || ''
 
     if (status === 401 && !originalRequest._retry) {
+
+      const current = router.currentRoute.value
+      const hasQRAuth = current.matched.some(r => (r.meta as any).hasQRAuth === true)
+
+      // if we're on a QR‐protected page, skip redirect and just reject
+      if (hasQRAuth) {
+        return Promise.reject(error)
+      }
+
       originalRequest._retry = true;
 
       try {
