@@ -4,81 +4,33 @@
 #include <zephyr/sys/uuid.h> 
 
 #include <my_json.h>
-#include <string.h>  // required for memcpy
-#include <stdio.h>   // for snprintf
-#include <ctype.h>
+#include <string.h>  
+#include <stdio.h>
+// #include <ctype.h>
 #include <time.h>
 
 LOG_MODULE_REGISTER(json_module);
 
-void generate_uuid(char *uuid_str, size_t len) {
+void generate_uuid(char *uuid_str) {
     struct uuid uuid;
     int ret;
 
     ret = uuid_generate_v4(&uuid);
     if (ret != 0) {
-        // Handle error (ret < 0)
         uuid_str[0] = '\0';
         return;
     }
 
     ret = uuid_to_string(&uuid, uuid_str);
     if (ret != 0) {
-        // Handle error (ret < 0)
         uuid_str[0] = '\0';
         return;
     }
 }
 
-// void print_json_full_packet(const struct json_full_packet *packet)
-extern void print_json_full_packet(const struct json_full_packet *packet) {
-    printk("Header:\n");
-    printk("  messageId: %s\n", packet->header.messageId);
-    printk("  gatewayId: %s\n", packet->header.gatewayId);
-    printk("  schemaVersion: %s\n", packet->header.schemaVersion);
-    printk("  messageType: %s\n", packet->header.messageType);
-
-    printk("Payload:\n");
-    printk("  deviceId: %s\n", packet->payload.deviceId);
-    printk("  time: %s\n", packet->payload.timestamp);
-    printk("  uptime: %d\n", packet->payload.uptime);
-
-    printk("  Location:\n");
-    printk("    latitude: %s\n", packet->payload.location.latitude);
-    printk("    ns: %s\n", packet->payload.location.ns);
-    printk("    longitude: %s\n", packet->payload.location.longitude);
-    printk("    ew: %s\n", packet->payload.location.ew);
-    printk("    altitude_m: %s\n", packet->payload.location.altitude_m);
-
-    printk("  Environment:\n");
-    printk("    temperature_c: %s\n", packet->payload.environment.temperature_c);
-    printk("    humidity_percent: %s\n", packet->payload.environment.humidity_percent);
-    printk("    pressure_hpa: %s\n", packet->payload.environment.pressure_hpa);
-    printk("    gas_ppm: %s\n", packet->payload.environment.gas_ppm);
-
-    printk("  Acceleration:\n");
-    printk("    x_mps2: %s\n", packet->payload.acceleration.x_mps2);
-    printk("    y_mps2: %s\n", packet->payload.acceleration.y_mps2);
-    printk("    z_mps2: %s\n", packet->payload.acceleration.z_mps2);
-
-    printk("Signature:\n");
-    printk("  alg: %s\n", packet->signature.alg);
-    printk("  keyId: %s\n", packet->signature.keyId);
-    printk("  value: %s\n", packet->signature.value);
-}
-
-extern void fill_json_packet_from_tracker_payload(const tracker_payload_t *payload, struct json_full_packet *packet) {
+extern void fill_json_packet(const tracker_payload_t *payload, struct json_full_packet *packet) {
     // Format strings from payload
     snprintf(packet->payload.deviceId, sizeof(packet->payload.deviceId), "dev-%d", payload->dev_id);
-
-    // //Decode unix timestamp
-    // struct tm decoded;
-    // timeutil_timegm(payload->timestamp, &decoded);
-
-    // printk("Decoded time: %04d-%02d-%02dT%02d:%02d:%02d\n",
-    //        decoded.tm_year + 1900, decoded.tm_mon + 1, decoded.tm_mday,
-    //        decoded.tm_hour, decoded.tm_min, decoded.tm_sec);
-    // }
 
     time_t raw_time = (time_t)payload->timestamp;
     struct tm timeinfo;
@@ -89,15 +41,6 @@ extern void fill_json_packet_from_tracker_payload(const tracker_payload_t *paylo
         printk("Failed to convert timestamp\n");
         return;
     }
-
-    // // Print time in desired format: YYYY-MM-DDTHH:MM:SS
-    // printk("Decoded time: %04d-%02d-%02dT%02d:%02d:%02d\n",
-    //     timeinfo.tm_year + 1900,
-    //     timeinfo.tm_mon + 1,
-    //     timeinfo.tm_mday,
-    //     timeinfo.tm_hour,
-    //     timeinfo.tm_min,
-    //     timeinfo.tm_sec);
 
     // Location
     snprintf(packet->payload.location.latitude, sizeof(packet->payload.location.latitude), "%.7f", payload->lat / 1e7);
@@ -126,9 +69,8 @@ extern void fill_json_packet_from_tracker_payload(const tracker_payload_t *paylo
     timeinfo.tm_sec);
     packet->payload.uptime = payload->uptime;
 
-
-    char uuid_str[UUID_STR_LEN];  // 37 bytes buffer including '\0'
-    generate_uuid(uuid_str, sizeof(uuid_str));
+    char uuid_str[UUID_STR_LEN];
+    generate_uuid(uuid_str);
 
     // Header (dummy values)
     strncpy(packet->header.messageId, uuid_str, sizeof(packet->header.messageId));

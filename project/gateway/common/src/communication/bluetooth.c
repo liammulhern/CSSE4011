@@ -683,8 +683,7 @@ extern void process_data_thread(void) {
         // Initialize JSON packet structure
         struct json_full_packet json_packet = {0};
         //fill the json packet from the unpacked tracker node payload
-        fill_json_packet_from_tracker_payload(&payload, &json_packet);
-        //print_json_full_packet(&json_packet);
+        fill_json_packet(&payload, &json_packet);
         //Encode JSON packet and print to terminal/send over uart
         encode_and_print_json(&json_packet);
     }

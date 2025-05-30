@@ -3,7 +3,6 @@
 #define BASE_JSON_H
 
 #include <zephyr/kernel.h>
-// #include <zephyr/data/json.h>
 
 #define JSON_BUFFER_SIZE 1024
 
@@ -92,62 +91,6 @@ struct json_full_packet {
     struct json_signature signature;
 };
 
-// // Location
-// static const struct json_obj_descr json_location_descr[] = {
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_location, latitude, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_location, ns, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_location, longitude, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_location, ew, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_location, altitude_m, JSON_TOK_STRING),
-// };
-
-// // Environment
-// static const struct json_obj_descr json_env_descr[] = {
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_environment, temperature_c, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_environment, humidity_percent, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_environment, pressure_hpa, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_environment, gas_ppm, JSON_TOK_STRING),
-// };
-
-// // Acceleration
-// static const struct json_obj_descr json_accel_descr[] = {
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_acceleration, x_mps2, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_acceleration, y_mps2, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload_acceleration, z_mps2, JSON_TOK_STRING),
-// };
-
-// // Payload
-// static const struct json_obj_descr json_payload_descr[] = {
-//     JSON_OBJ_DESCR_PRIM(struct json_payload, deviceId, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload, timestamp, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_payload, uptime, JSON_TOK_NUMBER),
-//     JSON_OBJ_DESCR_OBJECT(struct json_payload, location, json_location_descr),
-//     JSON_OBJ_DESCR_OBJECT(struct json_payload, environment, json_env_descr),
-//     JSON_OBJ_DESCR_OBJECT(struct json_payload, acceleration, json_accel_descr),
-// };
-
-// // Header
-// static const struct json_obj_descr json_header_descr[] = {
-//     JSON_OBJ_DESCR_PRIM(struct json_header, messageId, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_header, gatewayId, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_header, schemaVersion, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_header, messageType, JSON_TOK_STRING),
-// };
-
-// // Signature
-// static const struct json_obj_descr json_signature_descr[] = {
-//     JSON_OBJ_DESCR_PRIM(struct json_signature, alg, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_signature, keyId, JSON_TOK_STRING),
-//     JSON_OBJ_DESCR_PRIM(struct json_signature, value, JSON_TOK_STRING),
-// };
-
-// // Full packet
-// static const struct json_obj_descr json_full_descr[] = {
-//     JSON_OBJ_DESCR_OBJECT(struct json_full_packet, header, json_header_descr),
-//     JSON_OBJ_DESCR_OBJECT(struct json_full_packet, payload, json_payload_descr),
-//     JSON_OBJ_DESCR_OBJECT(struct json_full_packet, signature, json_signature_descr),
-// };
-
 static const char JSON_FORMAT[] =
     "{"
     "\"header\":{"
@@ -186,10 +129,7 @@ static const char JSON_FORMAT[] =
     "}"
     "}";
 
-// void print_json_full_packet(const struct json_full_packet *packet)
-extern void print_json_full_packet(const struct json_full_packet *packet);
-
-extern void fill_json_packet_from_tracker_payload(const tracker_payload_t *payload, struct json_full_packet *packet);
+extern void fill_json_packet(const tracker_payload_t *payload, struct json_full_packet *packet);
 
 extern void encode_and_print_json(const struct json_full_packet *packet);
 

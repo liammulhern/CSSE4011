@@ -19,3 +19,6 @@ west build -b esp32c3_devkitm ~/csse4011/repo-project/project/gateway/gateway-ne
 
 
 west build -b esp32_devkitc_wroom/esp32/procpu --sysbuild ~/csse4011/repo-project/project/gateway/gateway-net --pristine
+
+
+west build -b m5stack_core2/esp32/procpu --sysbuild ~/csse4011/repo-project/project/gateway/gateway-net --pristine
