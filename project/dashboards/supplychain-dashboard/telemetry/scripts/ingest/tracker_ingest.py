@@ -112,18 +112,20 @@ def tracker_raw_data_ingest(gatewayeventraw: GatewayEventRaw, payload: Telemetry
         logger.error(f"Payload already ingested for {tracker_event.message_id}")
         return tracker_event
 
-    if HexStr(hash) != tracker_event.compute_hash():
-        TrackerNotification.objects.create(
-            tracker=tracker,
-            message=f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {hash}.",
-            timestamp=timestamp,
-            notication_type=TrackerNotification.NOTICATION_TYPE_ALERT,
-        )
+    try:
+        if HexStr(hash) != tracker_event.compute_hash():
+            TrackerNotification.objects.create(
+                tracker=tracker,
+                message=f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {hash}.",
+                timestamp=timestamp,
+                notication_type=TrackerNotification.NOTICATION_TYPE_ALERT,
+            )
 
-        logger.error(f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {hash}.")
-    else:
-        # Upload the tracker event to the blockchain
-        block_id = tracker_event.anchor_on_iota()
-        logger.info(f"Anchored tracker event {tracker_event.message_id} as IOTA block {block_id}")
-
+            logger.error(f"Payload hash mismatch for tracker {tracker.tracker_key}. Expected {tracker_event.compute_hash()}, got {hash}.")
+        else:
+            # Upload the tracker event to the blockchain
+            block_id = tracker_event.anchor_on_iota()
+            logger.info(f"Anchored tracker event {tracker_event.message_id} as IOTA block {block_id}")
+    except Exception as e:
+        logger.error(f"{e}")
     return tracker_event
