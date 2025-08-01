@@ -10,21 +10,23 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential libpq-dev curl && \
     rm -rf /var/lib/apt/lists/*
 
+# Install uv (PEP 621) and deps
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 # Create non-root user
 RUN useradd --create-home appuser
 WORKDIR /home/appuser/pathledger-backend
-
-# Install uv (PEP 621) and deps
-RUN pip install --no-cache-dir uv
-COPY pyproject.toml uv.lock* ./
-RUN uv sync
 
 # ┌────────────────────────────────────────────────────────────────────────────┐
 # │ Dev: debug server                                                       │
 # └────────────────────────────────────────────────────────────────────────────┘
 FROM base AS dev
 EXPOSE 8000 5678
+
+WORKDIR /home/appuser/pathledger-backend
+
 USER appuser
+
 CMD ["uv", "run", "python", "-m", "debugpy", "--listen", "0.0.0.0:5678", \
      "manage.py", "runserver", "0.0.0.0:8000"]
 
@@ -45,6 +47,9 @@ RUN chmod +x docker-entrypoint.sh
 
 RUN mkdir -p /home/appuser/pathledger-backend/staticfiles \
     && chown -R appuser:appuser /home/appuser/pathledger-backend/staticfiles
+
+COPY pyproject.toml uv.lock* ./
+RUN uv sync --locked
 
 # Switch to non-root
 USER appuser

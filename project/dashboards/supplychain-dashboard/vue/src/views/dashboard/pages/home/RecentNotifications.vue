@@ -22,7 +22,7 @@ onMounted(() => {
 const recentNotifications = computed<ProductNotification[]>(() =>
   notificationStore.alerts
     .filter(n => !n.acknowledged_timestamp)
-    .slice(0, 5)
+    .slice(0, 1)
 )
 
 // Choose icon based on notification_type

@@ -15,6 +15,7 @@ import LiveEventFeed from '@/views/dashboard/pages/home/LiveEventFeed.vue'
 import ComplianceAlerts from '@/views/dashboard/pages/home/ComplianceAlerts.vue'
 import RecentNotifications from '@/views/dashboard/pages/home/RecentNotifications.vue'
 import ProductEventMap from '@/components/maps/ProductEventMap.vue'
+import NotificationTimeSeries from '@/views/dashboard/pages/home/NotificationTimeSeries.vue'
 
 import { useProductOrderStore } from '@/stores/productorder'
 import { useProductEventStore } from '@/stores/productevents'
@@ -171,7 +172,15 @@ const mapCenter = computed<[number, number]>(() => {
       </TabsList>
 
       <!-- OVERVIEW: summary + quick orders -->
-      <TabsContent value="overview" class="space-y-4">
+      <TabsContent value="overview" class="flex flex-col space-y-4">
+        <div class="flex flex-col flex-grow">
+          <Card class="flex-grow flex flex-col min-h-52">
+            <CardContent class="p-2 flex-grow">
+              <NotificationTimeSeries :date-range="dateRange"/>
+            </CardContent>
+          </Card>
+        </div>
+
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">

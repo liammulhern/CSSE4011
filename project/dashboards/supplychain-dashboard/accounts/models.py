@@ -156,3 +156,7 @@ class UserRole(models.Model):
         return f"{self.user} → {self.role}"
 
 
+class UserTemporary(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    expires_at = models.DateTimeField()
+    label = models.CharField(max_length=100, help_text="Identification (e.g., Event Booth #1)")
