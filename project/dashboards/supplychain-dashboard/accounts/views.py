@@ -7,6 +7,8 @@ from accounts.serialisers import UserSerializer
 
 from accounts.models import User, UserTemporary, Company, UserCompany, Role, UserRole
 
+from faker import Faker
+
 import uuid
 import secrets
 
@@ -22,7 +24,9 @@ def current_user(request):
 @api_view(['POST'])
 @permission_classes([])
 def create_temporary_user(request):
-    username = f"temp_{uuid.uuid4().hex[:6]}"
+    fake = Faker()
+
+    username = fake.name()
 
     password = secrets.token_urlsafe(16)
     expires_at = timezone.now() + timedelta(hours=8)

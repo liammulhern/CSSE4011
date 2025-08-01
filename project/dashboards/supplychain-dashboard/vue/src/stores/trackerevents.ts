@@ -36,7 +36,7 @@ export const useTrackerEventStore = defineStore('trackerEvent', {
       this.error = null
 
       try {
-        const { data } = await http.get<TrackerEvent[]>('/api/tracker-events/')
+        const { data } = await http.get<TrackerEvent[]>('/api/trackerevents/')
         this.events = data
       } catch (err) {
         this.error = err instanceof Error ? err.message : String(err)
@@ -52,9 +52,24 @@ export const useTrackerEventStore = defineStore('trackerEvent', {
 
       try {
         const { data } = await http.get<TrackerEvent>(
-          `/api/tracker-events/${messageId}/`
+          `/api/trackerevents/${messageId}/`
         )
         this.event = data
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : String(err)
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async fetchEventsByTracker(trackerId: number) {
+      this.loading = true
+      this.error = null
+      try {
+        const { data } = await http.get<TrackerEvent[]>(
+          `/api/trackerevents/?tracker=${trackerId}`
+        )
+        this.events = data
       } catch (err) {
         this.error = err instanceof Error ? err.message : String(err)
       } finally {

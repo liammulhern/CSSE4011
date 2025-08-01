@@ -247,7 +247,7 @@ const mapCenter = computed<[number, number]>(() => {
           </Card>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-1 lg:grid-cols-4">
+        <div class="grid gap-4 grid-cols-1 lg:grid-cols-4">
 
           <Card class="col-span-1 lg:col-span-3">
             <CardContent>
@@ -255,7 +255,7 @@ const mapCenter = computed<[number, number]>(() => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card class="col-span-1">
             <CardContent>
               <RecentNotifications />
             </CardContent>

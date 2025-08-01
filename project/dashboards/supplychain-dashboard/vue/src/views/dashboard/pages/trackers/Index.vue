@@ -1,93 +1,84 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { h, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useForm } from 'vee-validate'
-import { toTypedSchema } from '@vee-validate/zod'
-import * as z from 'zod'
-import http from '@/utils/http'
-import { toast } from '@/components/ui/toast'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { DataTable, type ColumnDef } from '@/components/ui/data-table'
+import DataTableHeader from '@/components/ui/data-table/DataTableHeader.vue'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+import { useTrackerStore } from '@/stores/tracker'
+import NewMessageForm from '@/views/dashboard/pages/trackers/tracker/NewMessageForm.vue'
+
+// Shape of each tracker row
+interface TrackerRow {
+  id: number
+  key: string
+}
 
 const router = useRouter()
+const store = useTrackerStore()
 
-// Validation schema for IoT Hub message
-const formSchema = toTypedSchema(
-  z.object({
-    deviceID: z.string().min(1, 'Device ID is required'),
-    messageType: z.string().min(1, 'Message Type is required'),
-    message: z.string().min(1, 'Message payload is required'),
-  })
+// Flatten list of trackers into table rows
+type TrackerRowData = TrackerRow
+const data = computed<TrackerRowData[]>(() =>
+  store.trackers.map(t => ({ id: t.id, key: t.tracker_key }))
 )
 
-// Setup Vee-Validate form
-const { handleSubmit, values, resetForm } = useForm({ validationSchema: formSchema })
-const loading = ref(false)
+const loading = computed(() => store.loading)
+const error = computed(() => store.error)
 
-// Submit handler
-const onSubmit = handleSubmit(async (vals) => {
-  loading.value = true
-  try {
-    await http.post('/api/iot-hub/send/', {
-      deviceID: vals.deviceID,
-      messageType: vals.messageType,
-      message: vals.message,
-    })
-    toast({ title: 'Message Sent', description: 'Your message was queued successfully.' })
-    resetForm()
-    // Optionally navigate somewhere
-    // router.push({ name: 'dashboard' })
-  } catch (err: any) {
-    toast({ title: 'Error', description: err.response?.data?.detail || err.message, variant: 'destructive' })
-  } finally {
-    loading.value = false
-  }
+onMounted(() => {
+  store.fetchTrackers()
 })
+
+// Table columns
+const columns: ColumnDef<TrackerRowData>[] = [
+  {
+    accessorKey: 'id',
+    header: ({ column }) => h(DataTableHeader, { column, title: '#' }),
+  },
+  {
+    accessorKey: 'key',
+    header: ({ column }) => h(DataTableHeader, { column, title: 'Tracker Key' }),
+    cell: ({ getValue }) => String(getValue()),
+  },
+  {
+    id: 'actions',
+    header: () => 'Actions',
+    cell: ({ row }) =>
+      h(
+        Button,
+        {
+          variant: 'ghost',
+          size: 'sm',
+          onClick: () => router.push({ name: 'tracker_index', params: { id: String(row.original.id) } }),
+        },
+        () => 'View'
+      ),
+  },
+]
 </script>
 
 <template>
-  <Card class="max-w-lg mx-auto mt-6">
-    <CardHeader>
-      <CardTitle>Send IoT Hub Message</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <form @submit.prevent="onSubmit" class="space-y-4">
-        <FormField name="deviceID" v-slot="{ field }">
-          <FormItem>
-            <FormLabel>Device ID</FormLabel>
-            <FormControl>
-              <Input v-bind="field" placeholder="e.g. pathledger-gateway-uart-0" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+  <div>
+    <page-header title="Trackers">
+      <NewMessageForm />
+    </page-header>
+    <div class="mb-4 flex justify-between items-center">
+      <h2 class="text-lg font-medium">Trackers</h2>
+      <Button :disabled="loading" @click="store.fetchTrackers()">
+        <Icon name="RefreshCw" class="pr-1" />
+        Refresh
+      </Button>
+    </div>
 
-        <FormField name="messageType" v-slot="{ field }">
-          <FormItem>
-            <FormLabel>Message Type</FormLabel>
-            <FormControl>
-              <Input v-bind="field" placeholder="e.g. deviceIDUpdate" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-
-        <FormField name="message" v-slot="{ field }">
-          <FormItem>
-            <FormLabel>Message Payload</FormLabel>
-            <FormControl>
-              <Input v-bind="field" placeholder="Enter payload (string or number)" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
-
-        <div class="flex justify-end">
-          <Button :loading="loading" type="submit">Send</Button>
-        </div>
-      </form>
-    </CardContent>
-  </Card>
+    <div v-if="loading" class="py-4 text-center">
+      Loading trackers…
+    </div>
+    <div v-else-if="error" class="py-4 text-red-500">
+      Error: {{ error }}
+    </div>
+    <div v-else>
+      <DataTable :columns="columns" :data="data" />
+    </div>
+  </div>
 </template>

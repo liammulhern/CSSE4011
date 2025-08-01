@@ -89,6 +89,12 @@ const router = createRouter({
           },
         },
         {
+          path: 'trackers/:id',
+          name: 'tracker_index',
+          component: () => import('@/views/dashboard/pages/trackers/tracker/Index.vue'),
+          props: route => ({ id: Number(route.params.id) }),
+        },
+        {
           path: 'user',
           name: 'user_index',
           component: () => import('@/views/dashboard/pages/user/Index.vue'),

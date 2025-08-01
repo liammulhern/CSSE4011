@@ -3,6 +3,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, permission_classes
 from rest_framework.response import Response
 from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
 
 from supplychain.models import TrackerEvent, ProductEvent
 from supplychain.serialisers.serialiser_events import (
@@ -15,6 +16,8 @@ from supplychain.serialisers.serialiser_events import (
 class TrackerEventViewSet(viewsets.ModelViewSet):
     queryset = TrackerEvent.objects.all()
     serializer_class = TrackerEventSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["tracker", "event_type"]
 
     @action(detail=True, methods=['post'], url_path='verify')
     def verify(self, request, pk=None):

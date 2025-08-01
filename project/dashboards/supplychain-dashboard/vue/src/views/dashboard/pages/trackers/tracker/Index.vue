@@ -1,92 +1,203 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { useForm } from 'vee-validate'
-import { toTypedSchema } from '@vee-validate/zod'
-import * as z from 'zod'
-import http from '@/utils/http'
-import { toast } from '@/components/ui/toast'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { h, onMounted, computed, defineProps } from 'vue'
+import { DataTable, type ColumnDef } from '@/components/ui/data-table'
+import DataTableHeader from '@/components/ui/data-table/DataTableHeader.vue'
 import { Button } from '@/components/ui/button'
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
+import { useTrackerEventStore } from '@/stores/trackerevents'
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  TimeScale,
+  Filler,
+} from 'chart.js'
+import { Line } from 'vue-chartjs'
+import 'chartjs-adapter-date-fns'
 
-const router = useRouter()
-
-// Validation schema for IoT Hub message
-const formSchema = toTypedSchema(
-  z.object({
-    deviceID: z.string().min(1, 'Device ID is required'),
-    messageType: z.string().min(1, 'Message Type is required'),
-    message: z.string().min(1, 'Message payload is required'),
-  })
+// Register Chart.js components
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  TimeScale,
+  Filler
 )
 
-// Setup Vee-Validate form
-const { handleSubmit, values, resetForm } = useForm({ validationSchema: formSchema })
-const loading = ref(false)
+// Props & store
+const props = defineProps<{ id: number }>()
+const store = useTrackerEventStore()
 
-// Submit handler
-const onSubmit = handleSubmit(async (vals) => {
-  loading.value = true
-  try {
-    await http.post('/api/iot-hub/send/', {
-      deviceID: vals.deviceID,
-      messageType: vals.messageType,
-      message: vals.message,
-    })
-    toast({ title: 'Message Sent', description: 'Your message was queued successfully.' })
-    resetForm()
-    // Optionally navigate somewhere
-    // router.push({ name: 'dashboard' })
-  } catch (err: any) {
-    toast({ title: 'Error', description: err.response?.data?.detail || err.message, variant: 'destructive' })
-  } finally {
-    loading.value = false
-  }
+onMounted(() => {
+  store.fetchEventsByTracker(props.id)
 })
+
+// Helper types & functions
+type EventRow = { message_id: string; timestamp: string; [key: string]: string | number }
+const flattenPayload = (payload: Record<string, any>): Record<string, string | number> => {
+  const flat: Record<string, string | number> = {}
+  Object.entries(payload).forEach(([k, v]) => {
+    if (v && typeof v === 'object') {
+      Object.entries(v).forEach(([subk, subv]) => {
+        flat[`${k}_${subk}`] = subv
+      })
+    } else {
+      flat[k] = v as string | number
+    }
+  })
+  return flat
+}
+
+// Color palette for series
+const COLORS = [
+  '#3B82F6', // blue
+  '#EF4444', // red
+  '#10B981', // green
+  '#F59E0B', // amber
+  '#8B5CF6', // violet
+  '#EC4899', // pink
+]
+
+// Table data
+const data = computed<EventRow[]>(() =>
+  store.events.map(e => ({
+    message_id: e.message_id,
+    timestamp: new Date(e.timestamp).toLocaleString(),
+    ...flattenPayload(e.payload),
+  }))
+)
+
+const tableColumns = computed<ColumnDef<EventRow>[]>(() => {
+  if (!data.value.length) return []
+  return Object.keys(data.value[0]).map(key => ({
+    accessorKey: key,
+    header: ({ column }) => h(DataTableHeader, { column, title: key.replace(/_/g, ' ') }),
+    cell: ({ getValue }) => String(getValue()),
+  }))
+})
+
+// Group numeric fields by prefix
+const numericKeys = computed(() =>
+  data.value.length
+    ? Object.keys(data.value[0]).filter(k => k !== 'timestamp' && !isNaN(Number(data.value[0][k])))
+    : []
+)
+
+const unitGroups = computed<Record<string, string[]>>(() => {
+  const groups: Record<string, string[]> = {}
+  numericKeys.value.forEach(key => {
+    const grp = key.split('_')[0]
+    ;(groups[grp] ||= []).push(key)
+  })
+  return groups
+})
+
+// Build per-group chartData with unique colours & gradients
+const chartDataByGroup = computed(() =>
+  Object.fromEntries(
+    Object.entries(unitGroups.value).map(([group, keys]) => {
+      const labels = data.value.map(r => new Date(r.timestamp))
+      const datasets = keys.map((key, idx) => {
+        const base = COLORS[idx % COLORS.length]
+        return {
+          label: key,
+          data: data.value.map(r => Number(r[key])),
+          borderColor: base,
+          tension: 0.4,
+          fill: true,
+          backgroundColor: (ctx: any) => {
+            const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height)
+            g.addColorStop(0, base + '33') // 20% alpha
+            g.addColorStop(1, base + '00') // 0% alpha
+            return g
+          },
+          pointRadius: 0,
+          pointHoverRadius: 4,
+        }
+      })
+      return [group, { labels, datasets }]
+    })
+  )
+)
+
+// Chart options (legend bottom for this view)
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom' as const,
+      align: 'center' as const,
+      labels: {
+        usePointStyle: true,
+        pointStyle: 'circle',
+        font: { size: 14 },
+        boxWidth: 10,
+      },
+    },
+    tooltip: {
+      enabled: true,
+      callbacks: {
+        title: items => items[0].parsed.x.toLocaleDateString(),
+        label: item => `${item.dataset.label}: ${item.parsed.y}`,
+      },
+    },
+  },
+  scales: {
+    x: {
+      type: 'time' as const,
+      time: { tooltipFormat: 'PP', displayFormats: { hour: 'MMM d h a' } },
+      ticks: { autoSkip: true, maxTicksLimit: 12, font: { size: 12 } },
+      grid: { display: false },
+    },
+    y: {
+      beginAtZero: true,
+      ticks: { font: { size: 12 } },
+      grid: { color: 'rgba(0,0,0,0.05)' },
+    },
+  },
+}
 </script>
 
 <template>
-  <Card class="max-w-lg mx-auto mt-6">
-    <CardHeader>
-      <CardTitle>Send IoT Hub Message</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <form @submit.prevent="onSubmit" class="space-y-4">
-        <FormField name="deviceID" v-slot="{ field }">
-          <FormItem>
-            <FormLabel>Device ID</FormLabel>
-            <FormControl>
-              <Input v-bind="field" placeholder="e.g. pathledger-gateway-uart-0" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+  <div>
+    <page-header title="Tracker Events" />
 
-        <FormField name="messageType" v-slot="{ field }">
-          <FormItem>
-            <FormLabel>Message Type</FormLabel>
-            <FormControl>
-              <Input v-bind="field" placeholder="e.g. deviceIDUpdate" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+    <div class="mb-4 flex justify-between items-center">
+      <h2 class="text-lg font-medium">Events for Tracker {{ props.id }}</h2>
+      <Button :disabled="store.loading" @click="store.fetchEventsByTracker(props.id)">
+        <Icon name="RefreshCw" class="pr-1" /> Refresh
+      </Button>
+    </div>
 
-        <FormField name="message" v-slot="{ field }">
-          <FormItem>
-            <FormLabel>Message Payload</FormLabel>
-            <FormControl>
-              <Input v-bind="field" placeholder="Enter payload (string or number)" />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+    <div v-if="store.loading" class="py-4 text-center">Loading events…</div>
+    <div v-else-if="store.error" class="py-4 text-red-500">Error: {{ store.error }}</div>
 
-        <div class="flex justify-end">
-          <Button :loading="loading" type="submit">Send</Button>
+    <div v-else-if="data.length">
+      <DataTable :columns="tableColumns" :data="data" />
+
+      <h2 class="text-lg font-medium my-4">Time Series</h2>
+      <div
+        v-for="(chartData, group) in chartDataByGroup"
+        :key="group"
+        class="mb-6 w-full h-64"
+      >
+        <h3 class="text-sm font-medium mb-2">{{ group.replace(/_/g, ' ') }}</h3>
+        <div class="w-full h-full">
+          <Line :data="chartData" :options="chartOptions" style="width: 100%; height: 100%;" />
         </div>
-      </form>
-    </CardContent>
-  </Card>
+      </div>
+    </div>
+
+    <div v-else class="py-4 text-center">No events found.</div>
+  </div>
 </template>
+
