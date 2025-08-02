@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[entrypoint] Running migrations…"
+echo "[entrypoint] making migrations…"
+if ! uv run python manage.py makemigrations accounts notifications supplychain telemetry; then
+  echo >&2 "[entrypoint][error] migrations failed! aborting."
+  exit 1
+fi
+
+echo "[entrypoint] running migrations…"
 if ! uv run python manage.py migrate --noinput; then
-  echo >&2 "[entrypoint][error] Migrations failed! Aborting."
+  echo >&2 "[entrypoint][error] migrations failed! aborting."
   exit 1
 fi
 

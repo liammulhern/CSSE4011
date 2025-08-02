@@ -1,11 +1,11 @@
 import axios from 'axios'
-import type {AxiosInstance} from 'axios';
+import type { AxiosInstance } from 'axios';
 import router from '@/router'
 import { refreshToken } from '@/services/auth';
 
 const http: AxiosInstance = axios.create({
-  // baseURL: import.meta.env.VITE_API_BASE_URL || 'https://pathledger.live',
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://pathledger.live',
+  // baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
   },

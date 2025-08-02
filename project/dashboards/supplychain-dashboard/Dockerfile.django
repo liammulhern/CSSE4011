@@ -51,11 +51,6 @@ RUN mkdir -p /home/appuser/pathledger-backend/staticfiles \
 COPY pyproject.toml uv.lock* ./
 RUN uv sync --locked
 
-# Switch to non-root
-USER appuser
-
-EXPOSE 8000
-
 # Healthcheck against a simple endpoint (you can add /healthz/ in Django)
 # HEALTHCHECK --interval=30s --timeout=5s \
 #   CMD curl --fail http://localhost:8000/healthz/ || exit 1

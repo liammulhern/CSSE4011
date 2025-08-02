@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VM_USER=liam
+VM_USER=pathledger
 VM_HOST=pathledger.live
 
 #–– CONFIGURE these before running: ––
@@ -25,10 +25,10 @@ zip -r "tmp/${ZIP_NAME}" . \
 
 
 echo "Copying to ${VM_USER}@${VM_HOST}:/tmp/${ZIP_NAME}..."
-scp "tmp/${ZIP_NAME}" "${VM_USER}@${VM_HOST}:/tmp/${ZIP_NAME}"
+scp -i /home/liam/.ssh/pathledger-vm_key.pem "tmp/${ZIP_NAME}" "${VM_USER}@${VM_HOST}:/tmp/${ZIP_NAME}"
 
 echo "Connecting to ${VM_HOST} to unpack & restart containers..."
-ssh "${VM_USER}@${VM_HOST}" bash <<EOF
+ssh -i /home/liam/.ssh/pathledger-vm_key.pem "${VM_USER}@${VM_HOST}" bash <<EOF
   set -euo pipefail
   echo "  • Ensuring target dir exists: ${VM_PATH}"
   mkdir -p "${VM_PATH}"
